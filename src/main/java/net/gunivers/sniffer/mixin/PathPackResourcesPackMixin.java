@@ -2,10 +2,12 @@ package net.gunivers.sniffer.mixin;
 
 import com.google.common.base.Joiner;
 import com.mojang.logging.LogUtils;
-import net.minecraft.resource.*;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
-import net.minecraft.util.path.PathUtil;
+import net.minecraft.FileUtil;
+import net.minecraft.Util;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PathPackResources;
+import net.minecraft.server.packs.resources.IoSupplier;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -26,16 +28,16 @@ import java.util.stream.Stream;
  *
  * @author theogiraudet
  */
-@Mixin(DirectoryResourcePack.class)
-public class DirectoryResourcePackMixin {
+@Mixin(PathPackResources.class)
+public class PathPackResourcesPackMixin {
 
     @Shadow
     private static final Logger LOGGER = LogUtils.getLogger();
 
     @Shadow
-    private static final Joiner SEPARATOR_JOINER = Joiner.on("/");
+    private static final Joiner PATH_JOINER = Joiner.on("/");
 
-    /**
+/**
      * Overwrites the findResources method to track function file paths.
      * This method enhances the original by capturing the physical file paths
      * of .mcfunction files and associating them with their identifiers,
@@ -49,24 +51,24 @@ public class DirectoryResourcePackMixin {
      * @param consumer The consumer to process found resources
      */
     @Overwrite
-    public static void findResources(String namespace, Path path, List<String> prefixSegments, ResourcePack.ResultConsumer consumer) {
-        Path path2 = PathUtil.getPath(path, prefixSegments);
+    public static void listPath(String namespace, Path path, List<String> prefixSegments, PackResources.ResourceOutput consumer) {
+        Path path2 = FileUtil.resolvePath(path, prefixSegments);
 
-        try (Stream<Path> stream = Files.find(path2, Integer.MAX_VALUE, (path2x, attributes) -> attributes.isRegularFile(), new FileVisitOption[0])) {
+        try (Stream<Path> stream = Files.find(path2, Integer.MAX_VALUE, (path2x, attributes) -> attributes.isRegularFile())) {
             stream.forEach((foundPath) -> {
-                String string2 = SEPARATOR_JOINER.join(path.relativize(foundPath));
-                Identifier identifier = Identifier.tryParse(namespace, string2);
+                String string2 = PATH_JOINER.join(path.relativize(foundPath));
+                ResourceLocation identifier = ResourceLocation.tryBuild(namespace, string2);
                 if (identifier == null) {
-                    Util.logErrorOrPause(String.format(Locale.ROOT, "Invalid path in pack: %s:%s, ignoring", namespace, string2));
+                    Util.logAndPauseIfInIde(String.format(Locale.ROOT, "Invalid path in pack: %s:%s, ignoring", namespace, string2));
                 } else {
                     if(identifier.getPath().endsWith(".mcfunction")) {
                         ScopeManager.get().savePath(foundPath, identifier, RealPath.Kind.DIRECTORY);
                     }
-                    consumer.accept(identifier, InputSupplier.create(foundPath));
+                    consumer.accept(identifier, IoSupplier.create(foundPath));
                 }
 
             });
-        } catch (NotDirectoryException | NoSuchFileException var10) {
+        } catch (NotDirectoryException | NoSuchFileException ignored) {
         } catch (IOException iOException) {
             LOGGER.error("Failed to list path {}", path2, iOException);
         }

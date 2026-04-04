@@ -1,6 +1,8 @@
 plugins {
-	id 'fabric-loom' version '1.11-SNAPSHOT'
+	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
+	id "org.jetbrains.kotlin.jvm" version "2.1.0"
+	id "com.gradleup.shadow" version "9.2.2"
 }
 
 version = project.mod_version
@@ -36,27 +38,40 @@ loom {
 
 }
 
+configurations {
+	shadowImpl
+}
+
+configurations.shadowImpl.extendsFrom(configurations.implementation)
+
 dependencies {
 	implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.24.0'
 	implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j.debug:0.24.0'
 	implementation 'jakarta.websocket:jakarta.websocket-api:2.2.0'
 	implementation 'org.glassfish.tyrus:tyrus-server:2.2.0'
 	implementation 'org.glassfish.tyrus:tyrus-container-grizzly-server:2.2.0'
+	implementation 'io.methvin:directory-watcher:0.19.1'
 
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-key-binding-api-v1:${project.fabric_version}"
+	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
 	
 	// Added Cloth Config and ModMenu
 	modApi("me.shedaniel.cloth:cloth-config-fabric:20.0.148") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
 	modImplementation("com.terraformersmc:modmenu:16.0.0-rc.1")
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+	kotlinOptions {
+		jvmTarget = 21
+	}
 }
 
 processResources {
@@ -70,6 +85,22 @@ processResources {
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
 }
+
+
+tasks.named("shadowJar") {
+	archiveClassifier.set("all")
+	from(sourceSets.main.output)
+	from(sourceSets.client.output)
+	configurations = [project.configurations.shadowImpl]
+}
+
+tasks.named("remapJar") {
+	dependsOn("shadowJar")
+	inputFile.set(tasks.named("shadowJar").flatMap { it.archiveFile })
+	archiveClassifier.set("")
+}
+
+tasks.build { dependsOn(tasks.remapJar) }
 
 java {
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task

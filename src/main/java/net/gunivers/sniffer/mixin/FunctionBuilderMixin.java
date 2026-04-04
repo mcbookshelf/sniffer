@@ -1,8 +1,8 @@
 package net.gunivers.sniffer.mixin;
 
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.function.FunctionBuilder;
-import net.minecraft.server.function.Macro;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.commands.functions.FunctionBuilder;
+import net.minecraft.commands.functions.MacroFunction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,7 +23,7 @@ import java.util.Optional;
  * @author theogiraudet
  */
 @Mixin(FunctionBuilder.class)
-public class FunctionBuilderMixin<T extends AbstractServerCommandSource<T>> {
+public class FunctionBuilderMixin<T extends ExecutionCommandSource<T>> {
 
     /**
      * The list of macro lines that make up the function.
@@ -31,7 +31,7 @@ public class FunctionBuilderMixin<T extends AbstractServerCommandSource<T>> {
      * that have been parsed from the function file.
      */
     @Shadow
-    private List<Macro.Line<T>> macroLines;
+    private List<MacroFunction.Entry<T>> macroEntries;
 
     /**
      * Injects code after a macro command is added to store its line number.
@@ -43,10 +43,10 @@ public class FunctionBuilderMixin<T extends AbstractServerCommandSource<T>> {
      * @param source The command source
      * @param ci The callback info
      */
-    @Inject(method = "addMacroCommand", at = @At(value = "TAIL"))
-    public void addMacroCommand(String command, int lineNum, T source, CallbackInfo ci) {
+    @Inject(method = "addMacro", at = @At(value = "TAIL"))
+    public void addMacro(String command, int lineNum, T source, CallbackInfo ci) {
         // Get the last added macro line and set its line number
-        Optional.ofNullable(macroLines.getLast()).ifPresent(macro -> {
+        Optional.ofNullable(macroEntries.getLast()).ifPresent(macro -> {
             try {
                 var field = macro.getClass().getDeclaredField("line");
                 field.setAccessible(true);

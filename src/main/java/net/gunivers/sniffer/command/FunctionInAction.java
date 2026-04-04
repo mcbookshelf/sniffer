@@ -3,15 +3,15 @@ package net.gunivers.sniffer.command;
 import com.mojang.logging.LogUtils;
 import net.gunivers.sniffer.dap.ScopeManager;
 import net.gunivers.sniffer.util.ReflectUtil;
-import net.minecraft.command.CommandExecutionContext;
-import net.minecraft.command.Frame;
-import net.minecraft.command.SourcedCommandAction;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.function.CommandFunction;
-import net.minecraft.server.function.ExpandedMacro;
-import net.minecraft.server.function.Macro;
-import net.minecraft.server.function.Procedure;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.commands.execution.ExecutionContext;
+import net.minecraft.commands.execution.Frame;
+import net.minecraft.commands.execution.UnboundEntryAction;
+import net.minecraft.commands.functions.CommandFunction;
+import net.minecraft.commands.functions.InstantiatedFunction;
+import net.minecraft.commands.functions.MacroFunction;
+import net.minecraft.commands.functions.PlainTextFunction;
+import net.minecraft.nbt.CompoundTag;
 import org.slf4j.Logger;
 
 import static net.gunivers.sniffer.command.StepType.isStepOut;
@@ -27,7 +27,7 @@ import static net.gunivers.sniffer.util.Utils.getId;
  * @author Alumopper
  * @author theogiraudet
  */
-public class FunctionInAction<T extends AbstractServerCommandSource<T>> implements SourcedCommandAction<T> {
+public class FunctionInAction<T extends ExecutionCommandSource<T>> implements UnboundEntryAction<T> {
 
     private final static Logger LOGGER = LogUtils.getLogger();
 
@@ -55,21 +55,21 @@ public class FunctionInAction<T extends AbstractServerCommandSource<T>> implemen
      * @param frame The current execution frame
      */
     @Override
-    public void execute(T source, CommandExecutionContext<T> context, Frame frame){
+    public void execute(T source, ExecutionContext<T> context, Frame frame){
         // Each time we are going into a deeper scope, we want to decrement of one to not skip the mustStop evaluation at the first command
         // We must do it here since the decrementation in FixCommandActionMixin is not called when a mcfunction is called
         if(BreakPointCommand.isDebugging && BreakPointCommand.moveSteps > 0 && !isStepOut()){
             BreakPointCommand.moveSteps --;
         }
         var id = function.id();
-        if(function instanceof ExpandedMacro<T> macro) {
+        if(function instanceof PlainTextFunction<T> macro) {
             id = getId(macro);
         }
-        if(ReflectUtil.getT(function, "originalMacro", Macro.class).onFailure(LOGGER::error).getDataOrElse(null) != null){
+        if(ReflectUtil.getT(function, "originalMacro", MacroFunction.class).onFailure(LOGGER::error).getDataOrElse(null) != null){
             //if originalMacro is not null, we are in a macro call, so we need to get the macro arguments and the original macro.
-            var function = ReflectUtil.getT(frame, "function", Procedure.class).onFailure(LOGGER::error).getDataOrElse(null);
+            var function = ReflectUtil.getT(frame, "function", InstantiatedFunction.class).onFailure(LOGGER::error).getDataOrElse(null);
             if(function == null) return;
-            var macroVariables = ReflectUtil.getT(function, "arguments", NbtCompound.class).onFailure(LOGGER::error).getDataOrElse(null);
+            var macroVariables = ReflectUtil.getT(function, "arguments", CompoundTag.class).onFailure(LOGGER::error).getDataOrElse(null);
             ScopeManager.get().newScope(id.toString(), source, macroVariables);
         }else{
             //otherwise it is a regular function call, so we just create a new scope with the function id without getting the macro arguments.

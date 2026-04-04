@@ -1,6 +1,8 @@
 package net.gunivers.sniffer.util;
 
 import com.mojang.logging.LogUtils;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.MappingResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -35,11 +37,23 @@ public final class ReflectUtil {
     private static final MethodHandles.Lookup PUBLIC_LOOKUP = MethodHandles.lookup();
     private static final Map<String, VarHandle> VAR_HANDLE_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, MethodHandle> MH_HANDLE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, MethodHandle> CONSTRUCTOR_HANDLE_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, Object> LAMBDA_CACHE = new ConcurrentHashMap<>();
+    private static final MappingResolver MR = FabricLoader.getInstance().getMappingResolver();
+
+    private static String mapField(String named, Class<?> owner, Class<?> target) {
+        return MR.mapFieldName("named", owner.getName(), named, target.getName());
+    }
 
     private static String key(Class<?> c, String name, Class<?>... types) {
         StringBuilder sb = new StringBuilder(c.getName()).append('#').append(name);
         for (Class<?> t : types) sb.append(':').append(t == null ? "null" : t.getName());
+        return sb.toString();
+    }
+
+    private static String keyConstructor(Class<?> target, Class<?>... paramTypes) {
+        StringBuilder sb = new StringBuilder(target.getName()).append("#<init>");
+        for (Class<?> t : paramTypes) sb.append(':').append(t == null ? "null" : t.getName());
         return sb.toString();
     }
 
@@ -79,7 +93,7 @@ public final class ReflectUtil {
         return VAR_HANDLE_CACHE.computeIfAbsent(k, kk -> {
             try {
                 // 先通过反射获取字段类型
-                Field field = target.getDeclaredField("fieldName");
+                Field field = target.getDeclaredField(fieldName);
                 Class<?> fieldType = field.getType();
                 MethodHandles.Lookup lookup =
                         MethodHandles.privateLookupIn(target, PUBLIC_LOOKUP);
@@ -133,7 +147,7 @@ public final class ReflectUtil {
     public static Result<?> get(Object object, String fieldName, Class<?> fieldType){
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success(vhGet(vh, object));
         }
@@ -148,7 +162,7 @@ public final class ReflectUtil {
     public static Result<?> get(Object object, String fieldName){
         var vh = findVarHandle(object.getClass(), fieldName);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success(vhGet(vh, object));
         }
@@ -158,7 +172,7 @@ public final class ReflectUtil {
     public static <T> Result<T> getT(Object object, String fieldName, Class<T> fieldType) {
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success((T) vhGet(vh, object));
         }
@@ -168,7 +182,7 @@ public final class ReflectUtil {
     public static <T> Result<T> getT(Object object, String fieldName) {
         var vh = findVarHandle(object.getClass(), fieldName);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success((T) vhGet(vh, object));
         }
@@ -195,7 +209,7 @@ public final class ReflectUtil {
     public static Result<?> set(Object object, String fieldName, Class<?> fieldType, Object value) {
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -205,7 +219,7 @@ public final class ReflectUtil {
     public static Result<?> set(Object object, String fieldName, Object value) {
         var vh = findVarHandle(object.getClass(), fieldName);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -215,7 +229,7 @@ public final class ReflectUtil {
     public static <T> Result<?> setT(Object object, String fieldName, Class<T> fieldType, T value) {
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -225,7 +239,7 @@ public final class ReflectUtil {
     public static <T> Result<?> setT(Object object, String fieldName, T value) {
         var vh = findVarHandle(object.getClass(), fieldName, value.getClass());
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -286,7 +300,7 @@ public final class ReflectUtil {
             return Result.success(mh.invoke(args));
         } catch (Throwable t) {
             LOGGER.error("Error while invoking method: {}({})", mh, Arrays.toString(args), t);
-            return Result.failure(t.getMessage());
+            return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
         }
     }
 
@@ -295,7 +309,7 @@ public final class ReflectUtil {
             return Result.success(mh.invokeWithArguments(args));
         } catch (Throwable t) {
             LOGGER.error("Error while invoking method: {}({})", mh, Arrays.toString(args.toArray()), t);
-            return Result.failure(t.getMessage());
+            return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
         }
     }
 
@@ -309,10 +323,10 @@ public final class ReflectUtil {
                 return Result.success(handle.invokeWithArguments(qwq));
             } catch (Throwable t) {
                 LOGGER.error("Error while invoking method: {}({})", name, Arrays.toString(args), t);
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }else{
-            return Result.failure("Method not found: " + name);
+            return Result.failure("Method not found: " + name, ExceptionCode.METHOD_NOT_FOUND);
         }
     }
 
@@ -326,10 +340,10 @@ public final class ReflectUtil {
                 return Result.success(handle.invokeWithArguments(qwq));
             } catch (Throwable t) {
                 LOGGER.error("Error while invoking method: {}({})", name, Arrays.toString(args), t);
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }else{
-            return Result.failure("Method not found: " + name);
+            return Result.failure("Method not found: " + name, ExceptionCode.METHOD_NOT_FOUND);
         }
     }
 
@@ -340,10 +354,10 @@ public final class ReflectUtil {
                 return Result.success(handle.invoke(caller));
             } catch (Throwable t) {
                 LOGGER.error("Error while invoking method: {}()", name, t);
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }else{
-            return Result.failure("Method not found: " + name);
+            return Result.failure("Method not found: " + name, ExceptionCode.METHOD_NOT_FOUND);
         }
     }
 
@@ -369,7 +383,7 @@ public final class ReflectUtil {
                 );
                 return cs.getTarget().invoke();
             } catch (Throwable t) {
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }));
     }
@@ -382,4 +396,32 @@ public final class ReflectUtil {
     }
 
     //endregion
+
+    @Nullable
+    private static MethodHandle findConstructorHandle(Class<?> target, Class<?>... paramTypes) {
+        String k = keyConstructor(target, paramTypes);
+        return CONSTRUCTOR_HANDLE_CACHE.computeIfAbsent(k, kk -> {
+            try {
+                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(target, PUBLIC_LOOKUP);
+                return lookup.findConstructor(target, MethodType.methodType(void.class, paramTypes));
+            } catch (ReflectiveOperationException e) {
+                LOGGER.error("Failed to find constructor for class {} with params {}", target, Arrays.toString(paramTypes), e);
+                return null;
+            }
+        });
+    }
+
+    public static <T> Result<T> newInstance(Class<T> target, Object... args) {
+        Class<?>[] paramTypes = Arrays.stream(args).map(arg -> arg == null ? Object.class : arg.getClass()).toArray(Class<?>[]::new);
+        MethodHandle ctor = findConstructorHandle(target, paramTypes);
+        if (ctor == null) {
+            return Result.failure("Constructor not found for " + target + " with params " + Arrays.toString(paramTypes), ExceptionCode.CONSTRUCTOR_NOT_FOUND);
+        }
+        try {
+            return Result.success((T) ctor.invokeWithArguments(args));
+        } catch (Throwable t) {
+            LOGGER.error("Error while invoking constructor for class {} with args {}", target, Arrays.toString(args), t);
+            return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
+        }
+    }
 }

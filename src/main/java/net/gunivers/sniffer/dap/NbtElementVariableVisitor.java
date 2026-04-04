@@ -1,7 +1,6 @@
 package net.gunivers.sniffer.dap;
 
 import net.minecraft.nbt.*;
-import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 import java.util.*;
 
@@ -12,7 +11,7 @@ import java.util.*;
  *
  * @author theogiraudet
  */
-public class NbtElementVariableVisitor implements NbtElementVisitor {
+public class NbtElementVariableVisitor implements TagVisitor {
 
     private int index;
     private final Map<Integer, DebuggerVariable> variables = new HashMap<>();
@@ -48,7 +47,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The string NBT element
      */
     @Override
-    public void visitString(NbtString element) {
+    public void visitString(StringTag element) {
         convertPrimitive(element);
     }
 
@@ -58,7 +57,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The byte NBT element
      */
     @Override
-    public void visitByte(NbtByte element) {
+    public void visitByte(ByteTag element) {
         convertPrimitive(element);
     }
 
@@ -68,7 +67,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The short NBT element
      */
     @Override
-    public void visitShort(NbtShort element) {
+    public void visitShort(ShortTag element) {
         convertPrimitive(element);
     }
 
@@ -78,7 +77,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The int NBT element
      */
     @Override
-    public void visitInt(NbtInt element) {
+    public void visitInt(IntTag element) {
         convertPrimitive(element);
     }
 
@@ -88,7 +87,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The long NBT element
      */
     @Override
-    public void visitLong(NbtLong element) {
+    public void visitLong(LongTag element) {
         convertPrimitive(element);
     }
 
@@ -98,7 +97,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The float NBT element
      */
     @Override
-    public void visitFloat(NbtFloat element) {
+    public void visitFloat(FloatTag element) {
         convertPrimitive(element);
     }
 
@@ -108,7 +107,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The double NBT element
      */
     @Override
-    public void visitDouble(NbtDouble element) {
+    public void visitDouble(DoubleTag element) {
         convertPrimitive(element);
     }
 
@@ -118,7 +117,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The byte array NBT element
      */
     @Override
-    public void visitByteArray(NbtByteArray element) {
+    public void visitByteArray(ByteArrayTag element) {
         convertList(element);
     }
 
@@ -128,7 +127,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The int array NBT element
      */
     @Override
-    public void visitIntArray(NbtIntArray element) {
+    public void visitIntArray(IntArrayTag element) {
         convertList(element);
     }
 
@@ -138,7 +137,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The long array NBT element
      */
     @Override
-    public void visitLongArray(NbtLongArray element) {
+    public void visitLongArray(LongArrayTag element) {
         convertList(element);
     }
 
@@ -148,7 +147,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The list NBT element
      */
     @Override
-    public void visitList(NbtList element) {
+    public void visitList(ListTag element) {
         convertList(element);
     }
 
@@ -159,13 +158,13 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param compound The compound NBT element
      */
     @Override
-    public void visitCompound(NbtCompound compound) {
+    public void visitCompound(CompoundTag compound) {
         var children = new LinkedList<DebuggerVariable>();
         var compoundIndex = this.index++;
-        var compoundVar = new DebuggerVariable(compoundIndex, this.currentName, compound.asString().orElse(null), children, isRoot);
+        var compoundVar = new DebuggerVariable(compoundIndex, this.currentName, compound.toString(), children, isRoot);
         isRoot = false;
         variables.put(compoundIndex, compoundVar);
-        for(var key: compound.getKeys()) {
+        for(var key: compound.keySet()) {
             this.currentName = key;
             Objects.requireNonNull(compound.get(key)).accept(this);
             children.add(returnVariable);
@@ -179,7 +178,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      * @param element The end NBT element
      */
     @Override
-    public void visitEnd(NbtEnd element) {}
+    public void visitEnd(EndTag element) {}
 
     /**
      * Converts an NBT list or array into debugger variables.
@@ -187,16 +186,15 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      *
      * @param list The NBT list or array to convert
      */
-    private void convertList(AbstractNbtList list) {
+    private void convertList(CollectionTag list) {
         var arrayIndex = index++;
         var array = new LinkedList<DebuggerVariable>();
         var name = currentName;
-        var result = new DebuggerVariable(arrayIndex, name, list.asString().orElse(null), array, false);
+        var result = new DebuggerVariable(arrayIndex, name, list.toString(), array, false);
         variables.put(arrayIndex, result);
         for(int i = 0; i < list.size(); i++) {
             currentName = Integer.toString(index);
-            //method_10534(int i) = get(int i)
-            list.method_10534(i).accept(this);
+            list.get(i).accept(this);
             array.add(returnVariable);
         }
         index++;
@@ -209,9 +207,9 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      *
      * @param element The primitive NBT element to convert
      */
-    private void convertPrimitive(NbtElement element) {
+    private void convertPrimitive(Tag element) {
         var i = index++;
-        returnVariable = new DebuggerVariable(i, currentName, element.asString().orElse(null), List.of(), isRoot);
+        returnVariable = new DebuggerVariable(i, currentName, element.toString(), List.of(), isRoot);
         variables.put(i, returnVariable);
     }
 }

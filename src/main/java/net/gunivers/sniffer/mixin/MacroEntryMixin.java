@@ -4,10 +4,10 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.brigadier.CommandDispatcher;
 import net.gunivers.sniffer.util.ReflectUtil;
-import net.minecraft.command.SourcedCommandAction;
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.function.MacroException;
-import net.minecraft.util.Identifier;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.commands.execution.UnboundEntryAction;
+import net.minecraft.commands.functions.MacroFunction;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
@@ -22,8 +22,9 @@ import java.util.List;
  * 
  * @author theogiraudet
  */
-@Mixin(targets = "net.minecraft.server.function.Macro$VariableLine")
-public class VariableLineMixin<T extends AbstractServerCommandSource<T>> {
+@SuppressWarnings("AddedMixinMembersNamePattern")
+@Mixin(MacroFunction.MacroEntry.class)
+public class MacroEntryMixin<T extends ExecutionCommandSource<T>> implements MacroEntryUniqueAccessor {
 
     /**
      * Stores the line number within the function file.
@@ -38,8 +39,9 @@ public class VariableLineMixin<T extends AbstractServerCommandSource<T>> {
      * 
      * @param line The line number in the source file (0-indexed)
      */
+    @Override
     @Unique
-    void setLine(int line) {
+    public void setLine(int line) {
         this.line = line;
     }
 
@@ -48,8 +50,9 @@ public class VariableLineMixin<T extends AbstractServerCommandSource<T>> {
      * 
      * @return The line number, or -1 if not set
      */
+    @Override
     @Unique
-    int getLine() {
+    public int getLine() {
         return this.line;
     }
 
@@ -65,11 +68,12 @@ public class VariableLineMixin<T extends AbstractServerCommandSource<T>> {
      * @return The modified command action with source information attached
      */
     @WrapMethod(method = "instantiate")
-    SourcedCommandAction<T> instantiate(List<String> args, CommandDispatcher<T> dispatcher, Identifier id, Operation<SourcedCommandAction<T>> original) throws MacroException {
+    UnboundEntryAction<T> instantiate(List<String> args, CommandDispatcher<T> dispatcher, ResourceLocation id, Operation<UnboundEntryAction<T>> original) {
         var result = original.call(args, dispatcher, id);
         ReflectUtil.invoke(result, "setSourceFunction", id.toString());
-        int line = ReflectUtil.getT(this, "line", int.class).getData();
+        int line = getLine();
         ReflectUtil.invoke(result, "setSourceLine", line);
         return result;
     }
 }
+

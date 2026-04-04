@@ -1,18 +1,22 @@
 package net.gunivers.sniffer;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.minecraft.resource.ResourceType;
-import org.glassfish.tyrus.server.Server;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import net.gunivers.sniffer.command.BreakPointCommand;
 import net.gunivers.sniffer.command.FunctionPathGetter;
 import net.gunivers.sniffer.config.DebuggerConfig;
 import net.gunivers.sniffer.dap.DebuggerState;
 import net.gunivers.sniffer.dap.ScopeManager;
 import net.gunivers.sniffer.dap.WebSocketServer;
+import net.gunivers.sniffer.debugcmd.*;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
+import org.glassfish.tyrus.server.Server;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import net.minecraft.commands.synchronization.SingletonArgumentInfo;
 
 import java.io.InputStream;
 import java.util.logging.LogManager;
@@ -34,6 +38,10 @@ public class DatapackDebugger implements ModInitializer {
 	 * This server allows IDE integration by implementing DAP over WebSockets.
 	 */
 	private static Server webSocketServer;
+
+	public static Server getWebSocketServer() {
+		return webSocketServer;
+	}
 
 	/**
 	 * Mod initialization method called on startup.
@@ -100,11 +108,30 @@ public class DatapackDebugger implements ModInitializer {
 				logger.error("Error stopping WebSocket server", e);
 			}
 		});
-		
-		ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new FunctionPathGetter());
+
+		//noinspection deprecation
+		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new FunctionPathGetter());
+
+		// Register custom argument types
+		ArgumentTypeRegistry.registerArgumentType(
+				ResourceLocation.tryBuild("sniffer", "log"),
+				LogArgumentType.class,
+				SingletonArgumentInfo.contextFree(LogArgumentType::log)
+		);
+		ArgumentTypeRegistry.registerArgumentType(
+				ResourceLocation.tryBuild("sniffer", "expr"),
+				ExprArgumentType.class,
+				SingletonArgumentInfo.contextFree(ExprArgumentType::expr)
+		);
 
 		// Initialize breakpoint command system
 		BreakPointCommand.onInitialize();
+
+		// Initialize Debug commands
+		LogCommand.onInitialize();
+		AssertCommand.onInitialize();
+		JvmtimerCommand.onInitialize();
+		WatchCommand.onInitialize();
 	}
 
 	/**

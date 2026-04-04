@@ -1,6 +1,6 @@
 package net.gunivers.sniffer.mixin;
 
-import net.minecraft.command.SingleCommandAction;
+import net.minecraft.commands.execution.tasks.BuildContexts;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
@@ -9,8 +9,9 @@ import org.spongepowered.asm.mixin.Unique;
  *
  * @author theogiraudet
  */
-@Mixin(SingleCommandAction.Sourced.class)
-public class SingleCommandActionSourcedMixin {
+@SuppressWarnings("AddedMixinMembersNamePattern")
+@Mixin(BuildContexts.Unbound.class)
+public class UnboundMixin implements UnboundUniqueAccessor {
 
     @Unique
     private String sourceFunction;
@@ -19,22 +20,27 @@ public class SingleCommandActionSourcedMixin {
     private int sourceLine;
 
     @Unique
+    @Override
     public String getSourceFunction() {
         return sourceFunction;
     }
 
     @Unique
+    @Override
     public void setSourceFunction(String sourceFunction) {
         this.sourceFunction = sourceFunction;
     }
 
     @Unique
+    @Override
     public int getSourceLine() {
         return sourceLine;
     }
 
     @Unique
-    public void setSourceLine(Integer sourceLine) {
+    @Override
+    public void setSourceLine(int sourceLine) {
         this.sourceLine = sourceLine;
     }
 }
+

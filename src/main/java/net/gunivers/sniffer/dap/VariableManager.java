@@ -1,14 +1,18 @@
 package net.gunivers.sniffer.dap;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.Vec2f;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import com.mojang.brigadier.StringReader;
+import kotlin.Pair;
+import net.gunivers.sniffer.debugcmd.DebugData;
+import net.gunivers.sniffer.debugcmd.ExprArgumentType;
+import net.gunivers.sniffer.util.Result;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.MessageFormat;
@@ -24,7 +28,7 @@ import java.util.Map;
  *
  * @author theogiraudet
  */
-public class VariableManager {
+public abstract class VariableManager {
 
     /**
      * Converts a command source into a map of debugger variables.
@@ -35,26 +39,26 @@ public class VariableManager {
      * @param startIndex The starting index for variable IDs
      * @return A map of variable IDs to debugger variables
      */
-    public static Map<Integer, DebuggerVariable> convertCommandSource(AbstractServerCommandSource<?> source, int startIndex) {
-        if(source instanceof ServerCommandSource commandSource) {
+    public static Map<Integer, DebuggerVariable> convertCommandSource(ExecutionCommandSource<?> source, int startIndex) {
+        if(source instanceof CommandSourceStack commandSource) {
             //if executor is an entity
             var executorVariable = convertEntityVariables(commandSource.getEntity(), startIndex, true);
-            var currentIndex = executorVariable.getRight();
+            var currentIndex = executorVariable.getSecond();
 
             var locId = currentIndex++;
 
             var posVariable = convertPos(commandSource.getPosition(), currentIndex, false);
-            currentIndex = posVariable.getRight();
+            currentIndex = posVariable.getSecond();
 
             var rotVariable = convertRotation(commandSource.getRotation(), currentIndex, false);
-            currentIndex = rotVariable.getRight();
+            currentIndex = rotVariable.getSecond();
 
-            var worldVariable = convertWorld(commandSource.getWorld(), currentIndex, false);
+            var worldVariable = convertWorld(commandSource.getLevel(), currentIndex, false);
 
-            var locationVariable = new DebuggerVariable(locId, "location", posVariable.getLeft().value(), List.of(posVariable.getLeft(), rotVariable.getLeft(), worldVariable), true);
+            var locationVariable = new DebuggerVariable(locId, "location", posVariable.getFirst().value(), List.of(posVariable.getFirst(), rotVariable.getFirst(), worldVariable), true);
 
             var result = new ArrayList<DebuggerVariable>(currentIndex);
-            result.add(executorVariable.getLeft());
+            result.add(executorVariable.getFirst());
             result.add(locationVariable);
 
             return flattenToMap(result);
@@ -72,6 +76,7 @@ public class VariableManager {
      * @param isRoot Whether this variable is a root-level variable
      * @return A pair containing the created variable and the next available ID
      */
+    @SuppressWarnings("SameParameterValue")
     private static Pair<DebuggerVariable, Integer> convertEntityVariables(@Nullable Entity entity, int startIndex, boolean isRoot) {
         if(entity == null) {
             return new Pair<>(
@@ -83,21 +88,21 @@ public class VariableManager {
         var id = startIndex + 1;
 
         var objectType = new DebuggerVariable(id++, "type", typeToString(entity.getType()), List.of(), false);
-        var objectName = new DebuggerVariable(id++, "name", entity.getName().getLiteralString(), List.of(), false);
+        var objectName = new DebuggerVariable(id++, "name", entity.getName().getString(), List.of(), false);
 
-        var objectUuid = new DebuggerVariable(id++, "uuid", entity.getUuidAsString(), List.of(), false);
+        var objectUuid = new DebuggerVariable(id++, "uuid", entity.getStringUUID(), List.of(), false);
 
-        var pos = convertPos(entity.getEntityPos(), id, false);
-        id = pos.getRight();
+        var pos = convertPos(entity.position(), id, false);
+        id = pos.getSecond();
 
-        var rot = convertRotation(entity.getRotationClient(), id, false);
-        id = rot.getRight();
+        var rot = convertRotation(entity.getRotationVector(), id, false);
+        id = rot.getSecond();
 
-        var objectDimension = convertWorld(entity.getEntityWorld(), id++, false);
+        var objectDimension = convertWorld(entity.level(), id++, false);
 
         var displayName = objectName.value() != null ? objectName.value() : objectType.value();
 
-        var children = List.of(objectType, objectName, objectUuid, pos.getLeft(), rot.getLeft(), objectDimension);
+        var children = List.of(objectType, objectName, objectUuid, pos.getFirst(), rot.getFirst(), objectDimension);
         return new Pair<>(new DebuggerVariable(startIndex, "executor", displayName, children, isRoot), id);
     }
 
@@ -121,7 +126,8 @@ public class VariableManager {
      * @param isRoot Whether this variable is a root-level variable
      * @return A pair containing the created variable and the next available ID
      */
-    private static Pair<DebuggerVariable, Integer> convertPos(Vec3d vec, int id, boolean isRoot) {
+    @SuppressWarnings("SameParameterValue")
+    private static Pair<DebuggerVariable, Integer> convertPos(Vec3 vec, int id, boolean isRoot) {
         var posId = id++;
         var objectPosX = new DebuggerVariable(id++, "x", Double.toString(vec.x), List.of(), false);
         var objectPosY = new DebuggerVariable(id++, "y", Double.toString(vec.y), List.of(), false);
@@ -140,7 +146,8 @@ public class VariableManager {
      * @param isRoot Whether this variable is a root-level variable
      * @return A pair containing the created variable and the next available ID
      */
-    private static Pair<DebuggerVariable, Integer> convertRotation(Vec2f vec, int id, boolean isRoot) {
+    @SuppressWarnings("SameParameterValue")
+    private static Pair<DebuggerVariable, Integer> convertRotation(Vec2 vec, int id, boolean isRoot) {
         var posId = id++;
         var objectPosX = new DebuggerVariable(id++, "yaw", Double.toString(vec.x), List.of(), false);
         var objectPosY = new DebuggerVariable(id++, "pitch", Double.toString(vec.y), List.of(), false);
@@ -158,8 +165,9 @@ public class VariableManager {
      * @param isRoot Whether this variable is a root-level variable
      * @return The created debugger variable
      */
-    private static DebuggerVariable convertWorld(World world, int id, boolean isRoot) {
-        return new DebuggerVariable(id, "world", world.getDimension().effects().getPath(), List.of(), isRoot);
+    @SuppressWarnings("SameParameterValue")
+    private static DebuggerVariable convertWorld(Level world, int id, boolean isRoot) {
+        return new DebuggerVariable(id, "world", world.dimensionType().effectsLocation().getPath(), List.of(), isRoot);
     }
 
     /**
@@ -199,13 +207,22 @@ public class VariableManager {
      * @param isRoot Whether this variable is a root-level variable
      * @return A map of variable IDs to debugger variables, or an empty map if compound is null
      */
-    public static Map<Integer, DebuggerVariable> convertNbtCompound(String name, @Nullable NbtCompound compound, int startIndex, boolean isRoot) {
+    public static Map<Integer, DebuggerVariable> convertNbtCompound(String name, @Nullable CompoundTag compound, int startIndex, boolean isRoot) {
         if(compound != null) {
             var visitor = new NbtElementVariableVisitor(startIndex, name, isRoot);
             compound.accept(visitor);
             return visitor.get();
         }
         return Map.of();
+    }
+
+    public static Result<DebugData> evaluate(String expression){
+        expression = expression.trim();
+        try {
+            return Result.success(new ExprArgumentType().parseArgumentWithoutBrackets(new StringReader(expression)));
+        }catch (Exception ex){
+            return Result.failure("Expression is invalid: " + ex.getMessage());
+        }
     }
 
 }

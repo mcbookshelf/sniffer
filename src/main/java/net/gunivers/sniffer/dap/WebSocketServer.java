@@ -14,6 +14,8 @@ import net.gunivers.sniffer.config.DebuggerConfig;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -185,6 +187,17 @@ public class WebSocketServer extends Endpoint {
         }
     }
 
+
+    private boolean isPortAvailable(int port) {
+        try (ServerSocket ss = new ServerSocket()) {
+            ss.setReuseAddress(true);
+            ss.bind(new InetSocketAddress("localhost", port));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * Launches the WebSocket server using the configured port.
      * 
@@ -218,23 +231,29 @@ public class WebSocketServer extends Endpoint {
         // Get configuration values
         DebuggerConfig config = DebuggerConfig.getInstance();
         String path = config.getPath();
-        
-        // Create and start a new server
-        server = new Server("localhost", port, "/", null, WebSocketConfigurator.class);
-        try {
-            server.start();
-            logger.info("Jakarta WebSocket DAP server is running on ws://localhost:{}/{}", port, path);
-        } catch (Exception e) {
-            logger.error("Error starting DAP server", e);
+
+        final int maxAttempts = 10000;
+        final int startPort = port;
+
+        for (int i = 0; i < maxAttempts; i++) {
+            port = startPort + i;
+            Server server = new Server("localhost", port, "/", null, WebSocketConfigurator.class);
             try {
-                server.stop();
-            } catch (Exception stopEx) {
-                logger.error("Error stopping failed server", stopEx);
+                server.start();
+                logger.info("Jakarta WebSocket DAP server is running on ws://localhost:{}/{}", port, ""); // 如果需要 path，请替换
+                return Optional.of(server);
+            } catch (Exception e) {
+                logger.debug("Failed to start server on port {}: {}", port, e.getMessage());
+                try {
+                    server.stop();
+                } catch (Exception stopEx) {
+                    logger.debug("Error stopping failed server on port {}: {}", port, stopEx.getMessage());
+                }
+                // 继续尝试下一个端口
             }
-            server = null;
         }
-        
-        return Optional.ofNullable(server);
+        logger.error("No available port found in range {} - {}", startPort, startPort + maxAttempts - 1);
+        return Optional.empty();
     }
     
     /**

@@ -1,11 +1,11 @@
 package net.gunivers.sniffer.command;
 
-import net.minecraft.command.CommandExecutionContext;
-import net.minecraft.command.Frame;
-import net.minecraft.command.SourcedCommandAction;
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.function.CommandFunction;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.commands.execution.UnboundEntryAction;
 import net.gunivers.sniffer.dap.ScopeManager;
+import net.minecraft.commands.execution.ExecutionContext;
+import net.minecraft.commands.execution.Frame;
+import net.minecraft.commands.functions.CommandFunction;
 
 import static net.gunivers.sniffer.command.StepType.isStepOut;
 
@@ -19,7 +19,7 @@ import static net.gunivers.sniffer.command.StepType.isStepOut;
  * @author Alumopper
  * @author theogiraudet
  */
-public class FunctionOutAction<T extends AbstractServerCommandSource<T>> implements SourcedCommandAction<T> {
+public class FunctionOutAction<T extends ExecutionCommandSource<T>> implements UnboundEntryAction<T> {
 
     /** 
      * The function being exited.
@@ -45,7 +45,7 @@ public class FunctionOutAction<T extends AbstractServerCommandSource<T>> impleme
      * @param frame The current execution frame
      */
     @Override
-    public void execute(T source, CommandExecutionContext<T> context, Frame frame) {
+    public void execute(T source, ExecutionContext<T> context, Frame frame) {
         ScopeManager.get().unscope();
         // BreakPointCommand.stepDepth - 1 because we only want to decrement if we go higher than the stepDepth
         if(BreakPointCommand.isDebugging && BreakPointCommand.moveSteps > 0 && isStepOut() && frame.depth() - 1 <= BreakPointCommand.stepDepth - 1) BreakPointCommand.moveSteps --;

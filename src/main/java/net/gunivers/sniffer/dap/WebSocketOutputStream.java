@@ -47,11 +47,10 @@ public class WebSocketOutputStream extends OutputStream {
     /**
      * Flushes the buffered data by sending it as a WebSocket text message.
      * The internal buffer is reset after sending.
-     * 
-     * @throws IOException If an error occurs sending the message or if the session is closed
+     *
      */
     @Override
-    public void flush() throws IOException {
+    public void flush() {
         String message = buffer.toString(StandardCharsets.UTF_8);
         buffer.reset();
         if (session.isOpen()) {

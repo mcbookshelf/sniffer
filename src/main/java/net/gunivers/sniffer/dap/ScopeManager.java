@@ -1,10 +1,10 @@
 package net.gunivers.sniffer.dap;
 
 import com.google.common.base.Suppliers;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.command.AbstractServerCommandSource;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
-import net.minecraft.util.Identifier;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -54,7 +54,7 @@ public class ScopeManager {
     public static class DebugScope {
         private final String function;
         private final RealPath path;
-        private final AbstractServerCommandSource<?> executor;
+        private final ExecutionCommandSource<?> executor;
         private int line = -2;
         private final Supplier<Map<Integer, DebuggerVariable>> variables;
         private final int id = ID++;
@@ -68,7 +68,7 @@ public class ScopeManager {
          * @param executor The command source executing the function
          * @param macroVariables The NBT compound containing macro variables
          */
-        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor,@Nullable NbtCompound macroVariables) {
+        protected DebugScope(@Nullable DebugScope parent, String function, ExecutionCommandSource<?> executor,@Nullable CompoundTag macroVariables) {
             this.parent = parent;
             this.function = function;
             this.path = PATHS.get(function);
@@ -89,7 +89,7 @@ public class ScopeManager {
          * @param function The function mcpath being executed
          * @param executor The command source executing the function
          */
-        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor) {
+        protected DebugScope(@Nullable DebugScope parent, String function, ExecutionCommandSource<?> executor) {
             this.parent = parent;
             this.function = function;
             this.path = PATHS.get(function);
@@ -124,7 +124,7 @@ public class ScopeManager {
          * 
          * @return The command source
          */
-        public AbstractServerCommandSource<?> getExecutor() {
+        public ExecutionCommandSource<?> getExecutor() {
             return executor;
         }
 
@@ -201,7 +201,7 @@ public class ScopeManager {
      * @param path The physical file path of the function
      * @param id The Minecraft identifier for the function
      */
-    public void savePath(Path path, Identifier id, RealPath.Kind kind) {
+    public void savePath(Path path, ResourceLocation id, RealPath.Kind kind) {
         var location = id.getNamespace() + ":" + id.getPath().substring("function/".length(), id.getPath().length() - ".mcfunction".length());
         PATHS.putIfAbsent(location, new RealPath(path.toAbsolutePath().toString(), kind));
     }
@@ -222,14 +222,14 @@ public class ScopeManager {
      * @param function The function mcpath
      * @param executor The command source executing the function
      */
-    public void newScope(String function, AbstractServerCommandSource<?> executor, NbtCompound macroVariables) {
+    public void newScope(String function, ExecutionCommandSource<?> executor, CompoundTag macroVariables) {
         var scope = new DebugScope(this.currentScope, function, executor, macroVariables);
         this.scopeIds.add(scope.id);
         this.debugScopeStack.push(scope);
         this.currentScope = scope;
     }
 
-    public void newScope(String function, AbstractServerCommandSource<?> executor) {
+    public void newScope(String function, ExecutionCommandSource<?> executor) {
         var scope = new DebugScope(this.currentScope, function, executor);
         this.scopeIds.add(scope.id);
         this.debugScopeStack.push(scope);

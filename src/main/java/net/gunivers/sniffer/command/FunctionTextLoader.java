@@ -1,6 +1,6 @@
 package net.gunivers.sniffer.command;
 
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.*;
 
@@ -13,13 +13,13 @@ import java.util.*;
  */
 public class FunctionTextLoader {
     /** Map storing function identifiers and their corresponding source code lines */
-    private static final Map<Identifier, List<String>> FUNCTION_TEXT = new HashMap<>();
+    private static final Map<ResourceLocation, List<String>> FUNCTION_TEXT = new HashMap<>();
 
     /**
      * Returns an iterable collection of all registered function identifiers.
      * @return An iterable containing all function identifiers
      */
-    public static Iterable<Identifier> functionIds(){
+    public static Iterable<ResourceLocation> functionIds(){
         return FUNCTION_TEXT.keySet();
     }
 
@@ -28,7 +28,7 @@ public class FunctionTextLoader {
      * @param id The identifier of the function
      * @param lines The list of source code lines for the function
      */
-    public static void put(Identifier id,List<String> lines){
+    public static void put(ResourceLocation id,List<String> lines){
         FUNCTION_TEXT.put(id,new ArrayList<>(lines));
     }
 
@@ -37,7 +37,7 @@ public class FunctionTextLoader {
      * @param id The identifier of the function
      * @return The list of source code lines, or null if the function is not found
      */
-    public static List<String> get(Identifier id){
+    public static List<String> get(ResourceLocation id){
         return FUNCTION_TEXT.getOrDefault(id, List.of());
     }
 }

@@ -1,8 +1,8 @@
 package net.gunivers.sniffer.command;
 
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
 
 /**
  * Resource loader that captures the ResourceManager instance during resource reload.
@@ -24,8 +24,8 @@ public class FunctionPathGetter implements SimpleSynchronousResourceReloadListen
      * @return The identifier for this resource reload listener
      */
     @Override
-    public Identifier getFabricId() {
-        return Identifier.of("datapack-debug-loader");
+    public ResourceLocation getFabricId() {
+        return ResourceLocation.parse("datapack-debug-loader");
     }
 
     /**
@@ -33,7 +33,7 @@ public class FunctionPathGetter implements SimpleSynchronousResourceReloadListen
      * @param manager The server's resource manager instance
      */
     @Override
-    public void reload(ResourceManager manager) {
+    public void onResourceManagerReload(ResourceManager manager) {
         MANAGER = manager;
     }
 }

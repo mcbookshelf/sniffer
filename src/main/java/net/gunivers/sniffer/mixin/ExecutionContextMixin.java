@@ -1,15 +1,25 @@
 package net.gunivers.sniffer.mixin;
 
+import kotlin.Pair;
 import net.gunivers.sniffer.command.FunctionInAction;
 import net.gunivers.sniffer.util.ReflectUtil;
-import net.minecraft.command.*;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.function.ExpandedMacro;
-import net.minecraft.server.function.Procedure;
-import net.minecraft.util.Pair;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.commands.CommandResultCallback;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.commands.execution.*;
+import net.minecraft.commands.execution.tasks.BuildContexts;
+import net.minecraft.commands.execution.tasks.CallFunction;
+import net.minecraft.commands.execution.tasks.ContinuationTask;
+import net.minecraft.commands.execution.tasks.ExecuteCommand;
+import net.minecraft.commands.functions.InstantiatedFunction;
+import net.minecraft.commands.functions.PlainTextFunction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.profiling.Profiler;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
@@ -44,28 +54,47 @@ import static net.gunivers.sniffer.command.StepType.*;
  * @author Alumopper
  * @author theogiraudet
  */
-@Mixin(CommandExecutionContext.class)
-abstract public class CommandExecutionContextMixin<T> {
+@SuppressWarnings("AddedMixinMembersNamePattern")
+@Mixin(ExecutionContext.class)
+abstract public class ExecutionContextMixin<T> implements ExecutionContextUniqueAccessor {
 
-    // Shadowed fields from the original class
+// Shadowed fields from the original class
     @Shadow @Final private static Logger LOGGER;
-    @Shadow @Final private int maxCommandChainLength;
+
+    @Shadow @Final private int commandLimit;
+
     @Shadow @Final private Profiler profiler;
-    @Shadow private int commandsRemaining;
-    @Shadow private boolean queueOverflowed;
+
+    @Shadow private int commandQuota;
+
+    @Shadow private boolean queueOverflow;
+
     @Shadow @Final private Deque<CommandQueueEntry<T>> commandQueue;
-    @Shadow @Final private List<CommandQueueEntry<T>> pendingCommands;
-    @Shadow private int currentDepth;
-    @Shadow protected abstract void queuePendingCommands();
+
+    @Shadow @Final private List<CommandQueueEntry<T>> newTopCommands;
+
+    @Shadow private int currentFrameDepth;
+
+    @Shadow protected abstract void pushNewCommands();
 
     @SuppressWarnings("DataFlowIssue")
-    @Shadow @NotNull private static <T extends AbstractServerCommandSource<T>> Frame frame(CommandExecutionContext<T> context, ReturnValueConsumer returnValueConsumer){return null;}
+    @Shadow @NotNull private static <T extends ExecutionCommandSource<T>> Frame createTopFrame(ExecutionContext<T> context, CommandResultCallback returnValueConsumer){return null;}
 
     /**
      * Holds the next command that will be executed in the current context.
      * This field helps track the execution flow for debugging purposes.
      */
-    @Unique private SourcedCommandAction<?> nextCommand;
+    @Unique private UnboundEntryAction<?> nextCommand;
+
+    @Override
+    public UnboundEntryAction<?> getNextCommand() {
+        return nextCommand;
+    }
+
+    @Override
+    public void setNextCommand(UnboundEntryAction<?> nextCommand) {
+        this.nextCommand = nextCommand;
+    }
 
     /**
      * Indicates whether the current command is the last one.
@@ -73,7 +102,22 @@ abstract public class CommandExecutionContextMixin<T> {
      */
     @Unique private boolean isLastCommand;
 
-    /**
+    @Override
+    public boolean getIsLastCommand() {
+        return isLastCommand;
+    }
+
+    @Override
+    public void setIsLastCommand(boolean isLastCommand) {
+        this.isLastCommand = isLastCommand;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Unique private ExecutionContext<T> getThis(){
+        return (ExecutionContext<T>) (Object)this;
+    }
+
+/**
      * Injects code to handle procedure calls during debugging.
      * This method ensures proper frame setup for function calls.
      *
@@ -83,40 +127,58 @@ abstract public class CommandExecutionContextMixin<T> {
      * @param returnValueConsumer The consumer for return values
      * @param ci The callback info
      */
-    @Inject(method = "enqueueProcedureCall", at = @At("HEAD"), cancellable = true)
-    private static <T extends AbstractServerCommandSource<T>> void enqueueProcedureCall(
-            CommandExecutionContext<T> context, Procedure<T> procedure, T source, ReturnValueConsumer returnValueConsumer, CallbackInfo ci
+    @Inject(method = "queueInitialFunctionCall", at = @At("HEAD"), cancellable = true)
+    private static <T extends ExecutionCommandSource<T>> void queueInitialFunctionCall(
+            ExecutionContext<T> context, InstantiatedFunction<T> procedure, T source, CommandResultCallback returnValueConsumer, CallbackInfo ci
     ) {
         // Create a new frame for the procedure call
-        Frame frame = frame(context, returnValueConsumer);
-        ReflectUtil.set(frame, "function", Procedure.class, procedure)
+        Frame frame = createTopFrame(context, returnValueConsumer);
+        ReflectUtil.set(frame, "function", InstantiatedFunction.class, procedure)
                 .onFailure(e -> LOGGER.error("Failed to set function in frame for procedure call: {}", e)
         );
         // Add the command to the queue with the modified frame
-        context.enqueueCommand(
-                new CommandQueueEntry<>(frame, new CommandFunctionAction<>(procedure, source.getReturnValueConsumer(), false).bind(source))
+        context.queueNext(
+                new CommandQueueEntry<>(frame, new CallFunction<>(procedure, source.callback(), false).bind(source))
         );
         ci.cancel();
     }
 
-    /**
+    @Unique
+    private void sendOverflowMessage(){
+        LOGGER.info("Command execution stopped due to limit (executed {} commands)", this.commandLimit);
+        MutableComponent text = Component.literal("Command execution stopped due to limit (executed " + this.commandLimit + " commands)")
+                .withColor(TextColor.parseColor("red").getOrThrow().getValue());
+        text.append("\n");
+        text.append("Stack trace:").append("\n");
+        text.append(getErrorStack(10));
+        MinecraftServer server = null;
+        var executor = ScopeManager.get().getDebugScopes().getFirst().getExecutor();
+        if(executor instanceof CommandSourceStack source){
+            server = source.getServer();
+        }
+        LOGGER.error(text.getString());
+        if(server != null){
+            server.getPlayerList().getPlayers().forEach(player -> player.sendSystemMessage(text));
+        }
+    }
+
+/**
      * Injects code to handle command execution during debugging.
      * This method manages the command queue and handles breakpoints.
      *
      * @param ci The callback info
      */
-    @Inject(method = "run()V", at = @At("HEAD"), cancellable = true)
-    private void onRun(CallbackInfo ci){
-        //noinspection unchecked
-        final var THIS = (CommandExecutionContext<T>) (Object) this;
+    @Inject(method = "runCommandQueue", at = @At("HEAD"), cancellable = true)
+    private void onRunCommandQueue(CallbackInfo ci){
+        final var THIS = getThis();
 
         // Process pending commands before starting the main loop
-        this.queuePendingCommands();
+        this.pushNewCommands();
 
         while (true) {
             // Check if we've hit the command execution limit
-            if (this.commandsRemaining <= 0) {
-                LOGGER.info("Command execution stopped due to limit (executed {} commands)", this.maxCommandChainLength);
+            if (this.commandQuota <= 0) {
+                sendOverflowMessage();
                 break;
             }
 
@@ -142,16 +204,16 @@ abstract public class CommandExecutionContextMixin<T> {
             executeCommandEntry(commandQueueEntry, THIS);
             
             // Check for queue overflow
-            if (this.queueOverflowed) {
-                LOGGER.error("Command execution stopped due to command queue overflow (max {})", 10000000);
+            if (this.queueOverflow) {
+                sendOverflowMessage();
                 break;
             }
 
             // Process any new commands that were added during execution
-            this.queuePendingCommands();
+            this.pushNewCommands();
         }
 
-        this.currentDepth = 0;
+        this.currentFrameDepth = 0;
         ci.cancel();
     }
 
@@ -167,19 +229,18 @@ abstract public class CommandExecutionContextMixin<T> {
      */
     @Unique
     private void onStep() {
-        //noinspection unchecked
-        final var THIS = (CommandExecutionContext<T>) (Object) this;
+        final var THIS = getThis();
 
         // Process pending commands before starting the step
-        this.queuePendingCommands();
+        this.pushNewCommands();
 
         while (true) {
             // If we are in step over mode, update the stepOverDepth if needed
             updateStepDepthIfNeeded();
 
             // Check command execution limits
-            if (this.commandsRemaining <= 0) {
-                LOGGER.info("Command execution stopped due to limit (executed {} commands)", this.maxCommandChainLength);
+            if (this.commandQuota <= 0) {
+                LOGGER.info("Command execution stopped due to limit (executed {} commands)", this.commandLimit);
                 break;
             }
 
@@ -211,16 +272,16 @@ abstract public class CommandExecutionContextMixin<T> {
             executeCommandEntry(commandQueueEntry, THIS);
             
             // Check for queue overflow
-            if (this.queueOverflowed) {
+            if (this.queueOverflow) {
                 LOGGER.error("Command execution stopped due to command queue overflow (max {})", 10000000);
                 break;
             }
 
             // Process any new commands that were added during execution
-            this.queuePendingCommands();
+            this.pushNewCommands();
         }
 
-        this.currentDepth = 0;
+        this.currentFrameDepth = 0;
     }
 
     /**
@@ -232,7 +293,7 @@ abstract public class CommandExecutionContextMixin<T> {
     @Unique
     private void updateStepDepthIfNeeded() {
         if(!isStepIn() && (stepDepth == -1 || isDebugging)) {
-            stepDepth = this.currentDepth;
+            stepDepth = this.currentFrameDepth;
         }
     }
 
@@ -249,8 +310,8 @@ abstract public class CommandExecutionContextMixin<T> {
     private void updateDebuggingState(CommandQueueEntry<T> commandQueueEntry) {
         // When we are in step over, we only activate the debug mode if we are in the same depth level than the one where the step over has been triggered
         // If the debug mode is already activate and the previous condition is false, then we keep the debug mode since this means we find a nested breakpoint
-        isDebugging = (isStepOver() && this.currentDepth >= commandQueueEntry.frame().depth() && this.currentDepth == stepDepth)
-                || (isStepOut() && (isLastCommand || (this.currentDepth > commandQueueEntry.frame().depth())))
+        isDebugging = (isStepOver() && this.currentFrameDepth >= commandQueueEntry.frame().depth() && this.currentFrameDepth == stepDepth)
+                || (isStepOut() && (isLastCommand || (this.currentFrameDepth > commandQueueEntry.frame().depth())))
                 || (isStepIn() && isDebugging);
     }
 
@@ -263,8 +324,8 @@ abstract public class CommandExecutionContextMixin<T> {
      * @param context The command execution context
      */
     @Unique
-    private void executeCommandEntry(CommandQueueEntry<T> commandQueueEntry, CommandExecutionContext<T> context) {
-        this.currentDepth = commandQueueEntry.frame().depth();
+    private void executeCommandEntry(CommandQueueEntry<T> commandQueueEntry, ExecutionContext<T> context) {
+        this.currentFrameDepth = commandQueueEntry.frame().depth();
         commandQueueEntry.execute(context);
     }
 
@@ -288,7 +349,7 @@ abstract public class CommandExecutionContextMixin<T> {
      * @param context The command execution context
      */
     @Unique
-    private void pauseExecution(CommandQueueEntry<T> commandQueueEntry, CommandExecutionContext<T> context) {
+    private void pauseExecution(CommandQueueEntry<T> commandQueueEntry, ExecutionContext<T> context) {
         // Put the command back in the queue
         commandQueue.addFirst(commandQueueEntry);
         // Store the current context if not already stored
@@ -314,8 +375,8 @@ abstract public class CommandExecutionContextMixin<T> {
         var function = this.getNextCommand(commandQueueEntry);
 
         var lineOpt = function.flatMap(fun -> {
-            if(fun instanceof SingleCommandAction.Sourced<?>){
-                return ReflectUtil.getT(fun, "sourceLine", int.class).onFailure(LOGGER::error).toOptional();
+            if(fun instanceof BuildContexts.Unbound<?> unbound) {
+                return Optional.of(UnboundUniqueAccessor.of(unbound).getSourceLine());
             }else{
                 return Optional.empty();
             }
@@ -331,7 +392,7 @@ abstract public class CommandExecutionContextMixin<T> {
         ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
         
         if (isDapBreakpoint) {
-            DebuggerState.get().triggerBreakpoint(DebuggerState.get().getServer().getCommandSource());
+            DebuggerState.get().triggerBreakpoint(DebuggerState.get().getServer().createCommandSourceStack());
         }
         
         return isDapBreakpoint;
@@ -358,9 +419,8 @@ abstract public class CommandExecutionContextMixin<T> {
             if(nextCommand instanceof FunctionOutAction<?> || nextCommand instanceof FunctionInAction<?>) {
                 shouldPause = false;
             } else {
-                ReflectUtil.getT(nextCommand, "sourceLine", int.class).onFailure(LOGGER::error).onSuccess(line ->
-                        ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line))
-                );
+                int line = ((UnboundUniqueAccessor) nextCommand).getSourceLine();
+                ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
             }
         }
 
@@ -384,17 +444,17 @@ abstract public class CommandExecutionContextMixin<T> {
      * @return An Optional containing the next command, or empty if not found
      */
     @Unique
-    private Optional<SourcedCommandAction<?>> getNextCommand(CommandQueueEntry<T> commandQueueEntry) {
+    private Optional<UnboundEntryAction<?>> getNextCommand(CommandQueueEntry<T> commandQueueEntry) {
         var function = getExpandedMacroFromFrame(commandQueueEntry.frame());
         if(function == null) {
             return Optional.empty();
         }
 
-        if (!(commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction)) {
+        if (!(commandQueueEntry.action() instanceof ContinuationTask<?, ?> steppedAction)) {
             return Optional.empty();
         }
 
-        int index = ReflectUtil.getT(steppedAction, "nextActionIndex", int.class).getData();
+        int index = ((ContinuationTaskAccessors) steppedAction).getIndex();
         if(index < 0) {
             return Optional.empty();
         }
@@ -411,8 +471,8 @@ abstract public class CommandExecutionContextMixin<T> {
      * @return The expanded macro, or null if an error occurred
      */
     @Unique
-    private ExpandedMacro<?> getExpandedMacroFromFrame(Frame frame) {
-        return ReflectUtil.getT(frame, "function", ExpandedMacro.class).onFailure(LOGGER::error).getDataOrElse(null);
+    private PlainTextFunction<?> getExpandedMacroFromFrame(Frame frame) {
+        return ReflectUtil.getT(frame, "function", PlainTextFunction.class).onFailure(LOGGER::error).getDataOrElse(null);
     }
 
     /**
@@ -424,22 +484,22 @@ abstract public class CommandExecutionContextMixin<T> {
      */
     @SuppressWarnings({"unchecked"})
     @Unique
-    private Pair<ExpandedMacro<T>, NbtCompound> getMacroAndArgsFromEntry(CommandQueueEntry<T> commandQueueEntry) {
+    private Pair<PlainTextFunction<T>, CompoundTag> getMacroAndArgsFromEntry(CommandQueueEntry<T> commandQueueEntry) {
         if (commandQueueEntry == null) {
             return null;
         }
 
         var frame = commandQueueEntry.frame();
         try {
-            var function = ReflectUtil.getT(frame, "function", ExpandedMacro.class).onFailure(LOGGER::error).getDataOrElse(null);
+            var function = ReflectUtil.getT(frame, "function", PlainTextFunction.class).onFailure(LOGGER::error).getDataOrElse(null);
             
             if (function == null) {
                 return null;
             }
 
-            var args = ReflectUtil.getT(function, "arguments", NbtCompound.class).onFailure(LOGGER::error).getDataOrElse(null);
+            var args = ReflectUtil.getT(function, "arguments", CompoundTag.class).onFailure(LOGGER::error).getDataOrElse(null);
 
-            return new Pair<ExpandedMacro<T>, NbtCompound>(function, args);
+            return new Pair<PlainTextFunction<T>, CompoundTag>(function, args);
         } catch (Exception e) {
             LOGGER.error("Failed to get macro and args: {}", e.getMessage());
             return null;
@@ -454,7 +514,7 @@ abstract public class CommandExecutionContextMixin<T> {
      * @return A pair containing the NBT element and whether it's a macro, or null if not found
      */
     @Unique
-    private Pair<NbtElement, Boolean> getKey(String key) {
+    private Pair<Tag, Boolean> getKey(String key) {
         CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
         
         var macroAndArgs = getMacroAndArgsFromEntry(commandQueueEntry);
@@ -462,7 +522,7 @@ abstract public class CommandExecutionContextMixin<T> {
             return null;
         }
         
-        var args = macroAndArgs.getRight();
+        var args = macroAndArgs.getSecond();
         // Return null if no arguments are available
         if (args == null) {
             return new Pair<>(null, false);
@@ -479,7 +539,7 @@ abstract public class CommandExecutionContextMixin<T> {
      * @return The NBT compound containing all values, or null if not available
      */
     @Unique
-    private NbtElement getAllNBT() {
+    private Tag getAllNBT() {
         CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
         
         var macroAndArgs = getMacroAndArgsFromEntry(commandQueueEntry);
@@ -487,7 +547,7 @@ abstract public class CommandExecutionContextMixin<T> {
             return null;
         }
         
-        return macroAndArgs.getRight();
+        return macroAndArgs.getSecond();
     }
 
     /**
@@ -505,9 +565,9 @@ abstract public class CommandExecutionContextMixin<T> {
             return null;
         }
         
-        var args = macroAndArgs.getRight();
+        var args = macroAndArgs.getSecond();
         if (args != null) {
-            return args.getKeys().stream().toList();
+            return args.keySet().stream().toList();
         } else {
             return null;
         }
@@ -521,9 +581,9 @@ abstract public class CommandExecutionContextMixin<T> {
      * @return true if the action is a fixed command action, false otherwise
      */
     @Unique
-    private boolean isFixCommandAction(@NotNull CommandAction<T> action) {
+    private boolean isFixCommandAction(@NotNull EntryAction<T> action) {
         // Only check sourced command actions
-        if (!(action instanceof SourcedCommandAction)) return false;
+        if (!(action instanceof UnboundEntryAction)) return false;
         try {
             // Use reflection to check all fields of the action
             Class<?> actionClass = action.getClass();
@@ -533,7 +593,7 @@ abstract public class CommandExecutionContextMixin<T> {
             for (Field field : fields) {
                 field.setAccessible(true);
                 Object fieldValue = field.get(action);
-                if (fieldValue instanceof FixedCommandAction) {
+                if (fieldValue instanceof ExecuteCommand) {
                     return true;
                 }
             }
@@ -555,3 +615,4 @@ abstract public class CommandExecutionContextMixin<T> {
         return this.commandQueue.peekFirst() != null;
     }
 }
+

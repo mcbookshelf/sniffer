@@ -1,7 +1,7 @@
 package net.gunivers.sniffer.dap;
 
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
 import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,6 +62,8 @@ public class DebuggerState {
     
     /** Flag indicating whether the debugger has been shut down */
     private boolean isShutdown = false;
+
+    public static CommandSourceStack currSource = null;
 
     /**
      * Private constructor to enforce singleton pattern.
@@ -292,8 +294,8 @@ public class DebuggerState {
      * @return The server command source
      * @throws IllegalStateException if the server is not set
      */
-    public @NotNull ServerCommandSource getCommandSource() {
-        return getServer().getCommandSource();
+    public @NotNull CommandSourceStack getCommandSource() {
+        return getServer().createCommandSourceStack();
     }
 
     /**
@@ -302,16 +304,18 @@ public class DebuggerState {
      *
      * @param source The command source that triggered the breakpoint
      */
-    public void triggerBreakpoint(@NotNull ServerCommandSource source) {
+    public void triggerBreakpoint(@NotNull CommandSourceStack source) {
         try {
             // Freeze the server to pause execution
-            source.getServer().getTickManager().setFrozen(true);
+            source.getServer().tickRateManager().setFrozen(true);
             
             // Notify all stop consumers
             notifyStopConsumersForCurrentPosition();
             
             // Set debugging flag
             isDebugging = true;
+
+            currSource = source;
 
             LOGGER.debug("Breakpoint triggered at {}:{}", this.scopeManager.getCurrentScope().get().getFunction(), this.scopeManager.getCurrentScope().get().getLine());
         } catch (Exception e) {

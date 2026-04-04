@@ -1,12 +1,15 @@
+// TODO(Ravel): Failed to fully resolve file: null
+// TODO(Ravel): Failed to fully resolve file: null
+// TODO(Ravel): Failed to fully resolve file: null
 package net.gunivers.sniffer.mixin;
 
-import net.minecraft.command.CommandExecutionContext;
-import net.minecraft.command.FixedCommandAction;
-import net.minecraft.command.Frame;
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.commands.execution.ExecutionContext;
+import net.minecraft.commands.execution.Frame;
+import net.minecraft.commands.execution.tasks.ExecuteCommand;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -27,35 +30,36 @@ import static net.gunivers.sniffer.command.StepType.isStepOut;
  *
  * @author Alumopper
  */
-@Mixin(FixedCommandAction.class)
-public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
+@Mixin(ExecuteCommand.class)
+public class ExecuteCommandMixin<T extends ExecutionCommandSource<T>> {
+
     /** The command string being executed */
-    @Shadow @Final private String command;
+    @Shadow @Final private String commandInput;
 
     /**
      * Injects code at the start of command execution to handle debugging.
      * This method manages step execution in debug mode and notifies players
      * about the currently executing command for better debugging visibility.
      *
-     * @param abstractServerCommandSource The command source executing the command
-     * @param commandExecutionContext The command execution context
+     * @param executionCommandSource The command source executing the command
+     * @param executionContext The command execution context
      * @param frame The execution frame
      * @param ci The callback info
      */
-    @Inject(method = "execute(Lnet/minecraft/server/command/AbstractServerCommandSource;Lnet/minecraft/command/CommandExecutionContext;Lnet/minecraft/command/Frame;)V",
+    @Inject(method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V",
             at = @At("HEAD"))
-    private void execute(T abstractServerCommandSource, CommandExecutionContext<T> commandExecutionContext, Frame frame, CallbackInfo ci) {
+    private void execute(T executionCommandSource, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
         if(frame.depth() == 0)
             return;
         // If we are in debug mode, we execute as many commands as determined by the moveSteps variable, except if we found a breakpoint before
         if(BreakPointCommand.isDebugging) {
             if(BreakPointCommand.moveSteps > 0 && !isStepOut()) BreakPointCommand.moveSteps --;
-            if(this.command.startsWith("breakpoint")) return;
-            if(abstractServerCommandSource instanceof ServerCommandSource serverCommandSource) {
+            if(this.commandInput.startsWith("breakpoint")) return;
+            if(executionCommandSource instanceof CommandSourceStack serverCommandSource) {
                 // We send to each player the executing command
-                var players = serverCommandSource.getServer().getPlayerManager().getPlayerList();
+                var players = serverCommandSource.getServer().getPlayerList().getPlayers();
                 for(var player : players) {
-                    player.sendMessage(addSnifferPrefix(Text.translatable("sniffer.commands.breakpoint.run", this.command).formatted(Formatting.WHITE)));
+                    player.sendSystemMessage(addSnifferPrefix(Component.translatable("sniffer.commands.breakpoint.run", this.commandInput).withStyle(ChatFormatting.WHITE)));
                 }
             }
         }
