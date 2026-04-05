@@ -51,6 +51,8 @@
   "sniffer.config.server_address": "Server Address: %s",
   "sniffer.config.server_address.tooltip": "The complete address to connect your debugger client to",
   "sniffer.config.title": "Sniffer Configuration",
+  "sniffer.commands.debugmode.disable": "Debug mode is now disabled",
+  "sniffer.commands.debugmode.enable": "Debug mode is now enabled",
   "sniffer.name": "Sniffer",
   "sniffer.step": "Step Into"
 }

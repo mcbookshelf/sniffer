@@ -1,8 +1,7 @@
 accessWidener   v1      official
 accessible      class   net/minecraft/commands/functions/FunctionBuilder
-accessible      class   net/minecraft/commands/functions/MacroFunction$Entry
-accessible class net/minecraft/commands/functions/MacroFunction$MacroEntry
 accessible      class   net/minecraft/commands/arguments/NbtPathArgument$Node
 accessible      method  net/minecraft/commands/arguments/NbtPathArgument parseNode (Lcom/mojang/brigadier/StringReader;Z)Lnet/minecraft/commands/arguments/NbtPathArgument$Node;
 accessible      class   net/minecraft/server/packs/FilePackResources$SharedZipFileAccess
 accessible      method  net/minecraft/server/packs/FilePackResources$SharedZipFileAccess getOrCreateZipFile ()Ljava/util/zip/ZipFile;
+accessible      method  net/minecraft/server/commands/data/StorageDataAccessor <init> (Lnet/minecraft/world/level/storage/CommandStorage;Lnet/minecraft/resources/Identifier;)V
