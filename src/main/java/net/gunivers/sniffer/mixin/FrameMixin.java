@@ -1,5 +1,6 @@
 package net.gunivers.sniffer.mixin;
 
+import net.gunivers.sniffer.accessor.FrameUniqueAccessor;
 import net.gunivers.sniffer.command.BreakPointCommand;
 import net.gunivers.sniffer.dap.ScopeManager;
 import net.minecraft.commands.execution.Frame;

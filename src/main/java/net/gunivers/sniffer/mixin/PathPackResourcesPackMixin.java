@@ -2,9 +2,8 @@ package net.gunivers.sniffer.mixin;
 
 import com.google.common.base.Joiner;
 import com.mojang.logging.LogUtils;
-import net.minecraft.FileUtil;
-import net.minecraft.Util;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FileUtil;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PathPackResources;
 import net.minecraft.server.packs.resources.IoSupplier;
@@ -57,9 +56,9 @@ public class PathPackResourcesPackMixin {
         try (Stream<Path> stream = Files.find(path2, Integer.MAX_VALUE, (path2x, attributes) -> attributes.isRegularFile())) {
             stream.forEach((foundPath) -> {
                 String string2 = PATH_JOINER.join(path.relativize(foundPath));
-                ResourceLocation identifier = ResourceLocation.tryBuild(namespace, string2);
+                Identifier identifier = Identifier.tryBuild(namespace, string2);
                 if (identifier == null) {
-                    Util.logAndPauseIfInIde(String.format(Locale.ROOT, "Invalid path in pack: %s:%s, ignoring", namespace, string2));
+                    LOGGER.warn("Invalid path in pack: {}:{}, ignoring", namespace, string2);
                 } else {
                     if(identifier.getPath().endsWith(".mcfunction")) {
                         ScopeManager.get().savePath(foundPath, identifier, RealPath.Kind.DIRECTORY);

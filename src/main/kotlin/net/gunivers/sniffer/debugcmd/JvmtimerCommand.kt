@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.gunivers.sniffer.util.Extension.appendLine
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
+import net.minecraft.server.permissions.Permissions
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.util.CommonColors
@@ -25,7 +26,7 @@ object JvmtimerCommand {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
                 literal<CommandSourceStack>("jvmtimer")
-                    .requires { it.hasPermission(2) }
+                    .requires { it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER) }
                     .then(literal<CommandSourceStack>("start")
                         .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)

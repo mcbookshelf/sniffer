@@ -1,4 +1,4 @@
-accessWidener   v1      named
+accessWidener   v1      official
 accessible      class   net/minecraft/commands/functions/FunctionBuilder
 accessible      class   net/minecraft/commands/functions/MacroFunction$Entry
 accessible class net/minecraft/commands/functions/MacroFunction$MacroEntry

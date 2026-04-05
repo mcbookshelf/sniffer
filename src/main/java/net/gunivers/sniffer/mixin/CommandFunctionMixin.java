@@ -3,6 +3,7 @@ package net.gunivers.sniffer.mixin;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.gunivers.sniffer.accessor.CommandFunctionUniqueAccessors;
 import net.gunivers.sniffer.DatapackDebugger;
 import net.gunivers.sniffer.command.FunctionTextLoader;
 import net.gunivers.sniffer.util.Extension;
@@ -11,7 +12,7 @@ import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.UnboundEntryAction;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.commands.functions.FunctionBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -39,7 +40,7 @@ public interface CommandFunctionMixin {
      * @reason to save in each command the file and source line
      */
     @Overwrite
-    static <T extends ExecutionCommandSource<T>> CommandFunction<T> fromLines(ResourceLocation id, CommandDispatcher<T> dispatcher, T source, List<String> lines) {
+    static <T extends ExecutionCommandSource<T>> CommandFunction<T> fromLines(Identifier id, CommandDispatcher<T> dispatcher, T source, List<String> lines) {
         FunctionTextLoader.put(id, lines);
         //noinspection unchecked
         FunctionBuilder<T> functionBuilder = ReflectUtil.newInstance(FunctionBuilder.class).getData();

@@ -4,6 +4,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
+import net.minecraft.server.permissions.Permissions
 import net.minecraft.network.chat.Component
 
 object LogCommand {
@@ -12,7 +13,7 @@ object LogCommand {
         CommandRegistrationCallback.EVENT.register { dispatcher, registryAccess, environment ->
             dispatcher.register(
                 literal<CommandSourceStack?>("log")
-                    .requires{it.hasPermission(2)}
+                    .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
                     .then(argument("log", LogArgumentType())
                         .executes {
                             val log = LogArgumentType.getLog(it, "log")

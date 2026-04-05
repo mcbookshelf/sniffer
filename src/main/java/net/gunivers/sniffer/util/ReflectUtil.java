@@ -283,10 +283,47 @@ public final class ReflectUtil {
             try {
                 return c.getDeclaredMethod(name, paramTypes);
             } catch (NoSuchMethodException ignored) {
-                c = c.getSuperclass();
             }
+            // fallback: match by name + arity with assignable/unboxed parameter types
+            for (Method m : c.getDeclaredMethods()) {
+                if (!m.getName().equals(name)) continue;
+                Class<?>[] mp = m.getParameterTypes();
+                if (mp.length != paramTypes.length) continue;
+                boolean ok = true;
+                for (int i = 0; i < mp.length; i++) {
+                    if (!isAssignableLoose(mp[i], paramTypes[i])) { ok = false; break; }
+                }
+                if (ok) return m;
+            }
+            // also check interfaces (for mixin-added interface methods)
+            for (Class<?> iface : c.getInterfaces()) {
+                Method im = findMethodReflective(iface, name, paramTypes);
+                if (im != null) return im;
+            }
+            c = c.getSuperclass();
         }
         return null;
+    }
+
+    private static boolean isAssignableLoose(Class<?> param, Class<?> arg) {
+        if (arg == null) return !param.isPrimitive();
+        if (param.isAssignableFrom(arg)) return true;
+        if (param.isPrimitive()) return wrap(param) == arg;
+        if (arg.isPrimitive()) return param == wrap(arg);
+        return false;
+    }
+
+    private static Class<?> wrap(Class<?> p) {
+        if (p == int.class) return Integer.class;
+        if (p == long.class) return Long.class;
+        if (p == boolean.class) return Boolean.class;
+        if (p == byte.class) return Byte.class;
+        if (p == short.class) return Short.class;
+        if (p == float.class) return Float.class;
+        if (p == double.class) return Double.class;
+        if (p == char.class) return Character.class;
+        if (p == void.class) return Void.class;
+        return p;
     }
 
     /**

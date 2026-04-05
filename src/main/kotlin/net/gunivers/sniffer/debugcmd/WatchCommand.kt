@@ -6,7 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.logging.LogUtils
 import io.methvin.watcher.DirectoryChangeEvent
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
-import net.gunivers.sniffer.mixin.CommandFunctionUniqueAccessors
+import net.gunivers.sniffer.accessor.CommandFunctionUniqueAccessors
 import net.gunivers.sniffer.mixin.ServerFunctionLibraryAccessors
 import net.gunivers.sniffer.mixin.ServerFunctionManagerAccessors
 import net.gunivers.sniffer.watcher.WatcherManager
@@ -17,11 +17,12 @@ import net.minecraft.commands.functions.CommandFunction
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.TextColor
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.ServerFunctionManager
 import net.minecraft.util.CommonColors
 import net.minecraft.world.level.storage.LevelResource
+import net.minecraft.server.permissions.Permissions
 import net.minecraft.world.phys.Vec2
 import net.minecraft.world.phys.Vec3
 import java.io.File
@@ -52,7 +53,7 @@ object WatchCommand {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
                 literal<CommandSourceStack?>("watch")
-                    .requires{it.hasPermission(2)}
+                    .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
                     .then(literal<CommandSourceStack?>("start")
                         .then(argument("id", StringArgumentType.string())
                             .suggests(DatapackIDSuggestionProvider)
@@ -216,9 +217,9 @@ object WatchCommand {
         val la = (manager as ServerFunctionManagerAccessors).library as ServerFunctionLibraryAccessors
         val dispatcher = la.dispatcher
         val functions = la.functions
-        val level = la.functionCompilationLevel
+        val permissions = la.functionCompilationPermissions
         val CommandSourceStack = CommandSourceStack(
-            CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, null, level, "", CommonComponents.EMPTY, null, null
+            CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, server.overworld(), permissions, "", CommonComponents.EMPTY, server, null
         )
         CompletableFuture.supplyAsync {
             path.map { (functionPath, datapackPath) ->
@@ -236,11 +237,11 @@ object WatchCommand {
             }.filterNotNull()
         }.handle {modified, ex ->
             if(ex != null){
-                val text = Component.translatable("sniffer.commands.watcher.modify.failed.ex", ex.message).withColor(CommonColors.RED)
+                val text = Component.translatable("sniffer.commands.watcher.modify.failed.ex", ex.message ?: "unknown").withColor(CommonColors.RED)
                 server.playerList.broadcastSystemMessage(text, false)
                 LOGGER.error("Failed to modify functions", ex)
             }
-            val qwq = HashMap<ResourceLocation, CommandFunction<CommandSourceStack>>()
+            val qwq = HashMap<Identifier, CommandFunction<CommandSourceStack>>()
             qwq.putAll(functions)
             modified.forEach {
                 qwq[it.id()] = it
@@ -259,9 +260,9 @@ object WatchCommand {
         val la = (manager as ServerFunctionManagerAccessors).library as ServerFunctionLibraryAccessors
         val dispatcher = la.dispatcher
         val functions = la.functions
-        val level = la.functionCompilationLevel
+        val permissions = la.functionCompilationPermissions
         val CommandSourceStack = CommandSourceStack(
-            CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, null, level, "", CommonComponents.EMPTY, null, null
+            CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, server.overworld(), permissions, "", CommonComponents.EMPTY, server, null
         )
         CompletableFuture.supplyAsync {
             path.map { (functionPath, datapackPath) ->
@@ -279,11 +280,11 @@ object WatchCommand {
             }.filterNotNull()
         }.handle {created, ex ->
             if(ex != null){
-                val text = Component.translatable("sniffer.commands.watcher.create.failed.ex", ex.message).withColor(CommonColors.RED)
+                val text = Component.translatable("sniffer.commands.watcher.create.failed.ex", ex.message ?: "unknown").withColor(CommonColors.RED)
                 server.playerList.broadcastSystemMessage(text, false)
                 LOGGER.error("Failed to create functions", ex)
             }
-            val qwq = HashMap<ResourceLocation, CommandFunction<CommandSourceStack>>()
+            val qwq = HashMap<Identifier, CommandFunction<CommandSourceStack>>()
             qwq.putAll(functions)
             created.forEach {
                 qwq[it.id()] = it
@@ -303,11 +304,11 @@ object WatchCommand {
             }
         }.handle {deleted, ex ->
             if(ex != null){
-                val text = Component.translatable("sniffer.commands.watcher.delete.failed.ex", ex.message).withColor(CommonColors.RED)
+                val text = Component.translatable("sniffer.commands.watcher.delete.failed.ex", ex.message ?: "unknown").withColor(CommonColors.RED)
                 server.playerList.broadcastSystemMessage(text, false)
                 LOGGER.error("Failed to delete functions", ex)
             }
-            val qwq = HashMap<ResourceLocation, CommandFunction<CommandSourceStack>>()
+            val qwq = HashMap<Identifier, CommandFunction<CommandSourceStack>>()
             qwq.putAll(functions)
             deleted.forEach {
                 qwq.remove(it)
@@ -318,7 +319,7 @@ object WatchCommand {
         }
     }
 
-    private fun getIdentifier(functionPath: Path, datapackPath: Path): ResourceLocation {
+    private fun getIdentifier(functionPath: Path, datapackPath: Path): Identifier {
         val func = functionPath.toAbsolutePath().normalize()
         val dp = datapackPath.toAbsolutePath().normalize()
         val rel = dp.relativize(func) // 假设输入合法，rel 格式为 data/<namespace>/functions/...
@@ -327,6 +328,6 @@ object WatchCommand {
         val funcPathPart = rel.subpath(3, rel.nameCount).toString().replace(File.separatorChar, '/')
         val pathWithoutExt = funcPathPart.removeSuffix(".mcfunction")
 
-        return ResourceLocation.fromNamespaceAndPath(namespace, pathWithoutExt)
+        return Identifier.fromNamespaceAndPath(namespace, pathWithoutExt)
     }
 }

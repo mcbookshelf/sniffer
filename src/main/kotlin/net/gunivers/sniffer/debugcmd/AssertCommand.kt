@@ -8,6 +8,7 @@ import net.gunivers.sniffer.command.BreakPointCommand
 import net.gunivers.sniffer.util.Extension.appendLine
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
+import net.minecraft.server.permissions.Permissions
 import net.minecraft.nbt.ByteTag
 import net.minecraft.nbt.NbtUtils
 import net.minecraft.nbt.Tag
@@ -23,7 +24,7 @@ object AssertCommand {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
                 literal<CommandSourceStack?>("assert")
-                    .requires{it.hasPermission(2)}
+                    .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
                     .then(argument("expr", ExprArgumentType())
                         .executes {
                             try{
