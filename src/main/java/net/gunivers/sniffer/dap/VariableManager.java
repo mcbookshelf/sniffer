@@ -167,7 +167,7 @@ public abstract class VariableManager {
      */
     @SuppressWarnings("SameParameterValue")
     private static DebuggerVariable convertWorld(Level world, int id, boolean isRoot) {
-        return new DebuggerVariable(id, "world", world.dimensionType().effectsLocation().getPath(), List.of(), isRoot);
+        return new DebuggerVariable(id, "world", world.dimension().identifier().getPath(), List.of(), isRoot);
     }
 
     /**

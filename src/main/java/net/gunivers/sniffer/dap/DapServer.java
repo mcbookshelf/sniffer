@@ -7,7 +7,7 @@ import net.gunivers.sniffer.command.StepType;
 import net.gunivers.sniffer.debugcmd.DebugData;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
@@ -335,7 +335,7 @@ public class DapServer implements IDebugProtocolServer {
         LOGGER.debug("Source request received with arguments: {}", args);
 
         var response = new SourceResponse();
-        var id = ResourceLocation.tryParse(args.getSource().getName());
+        var id = Identifier.tryParse(args.getSource().getName());
         var content = String.join("\n", FunctionTextLoader.get(id));
 
         response.setContent(content);

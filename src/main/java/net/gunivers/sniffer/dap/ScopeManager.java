@@ -3,7 +3,7 @@ package net.gunivers.sniffer.dap;
 import com.google.common.base.Suppliers;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -201,7 +201,7 @@ public class ScopeManager {
      * @param path The physical file path of the function
      * @param id The Minecraft identifier for the function
      */
-    public void savePath(Path path, ResourceLocation id, RealPath.Kind kind) {
+    public void savePath(Path path, Identifier id, RealPath.Kind kind) {
         var location = id.getNamespace() + ":" + id.getPath().substring("function/".length(), id.getPath().length() - ".mcfunction".length());
         PATHS.putIfAbsent(location, new RealPath(path.toAbsolutePath().toString(), kind));
     }

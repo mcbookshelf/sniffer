@@ -1,5 +1,6 @@
 package net.gunivers.sniffer.mixin;
 
+import net.gunivers.sniffer.accessor.UnboundUniqueAccessor;
 import net.minecraft.commands.execution.tasks.BuildContexts;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -19,25 +20,21 @@ public class UnboundMixin implements UnboundUniqueAccessor {
     @Unique
     private int sourceLine;
 
-    @Unique
     @Override
     public String getSourceFunction() {
         return sourceFunction;
     }
 
-    @Unique
     @Override
     public void setSourceFunction(String sourceFunction) {
         this.sourceFunction = sourceFunction;
     }
 
-    @Unique
     @Override
     public int getSourceLine() {
         return sourceLine;
     }
 
-    @Unique
     @Override
     public void setSourceLine(int sourceLine) {
         this.sourceLine = sourceLine;

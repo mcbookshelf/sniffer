@@ -26,8 +26,8 @@ import static net.minecraft.commands.execution.tasks.BuildContexts.ERROR_FORK_LI
 @Mixin(BuildContexts.class)
 public class SingleCommandActionMixin<T extends ExecutionCommandSource<T>> {
 
-    @Shadow private final String commandInput = null;
-    @Shadow private final ContextChain<T> command = null;
+    @Shadow private String commandInput;
+    @Shadow private ContextChain<T> command;
 
     /**
      * @author

@@ -21,7 +21,7 @@ import net.minecraft.commands.arguments.coordinates.Coordinates
 import net.minecraft.commands.arguments.selector.EntitySelector
 import net.minecraft.nbt.*
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 import net.minecraft.server.commands.data.BlockDataAccessor
 import net.minecraft.server.commands.data.DataCommands
 import net.minecraft.server.commands.data.EntityDataAccessor
@@ -426,7 +426,7 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
             }
             "storage" -> {
                 reader.skipWhitespace()
-                val id = ResourceLocationArgument.id().parse(reader)
+                val id = IdentifierArgument.id().parse(reader)
                 reader.skipWhitespace()
                 val path = nbtPath().parse(reader)
                 StorageDataSource(id, path)
@@ -472,7 +472,7 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
             }
         }
 
-        private class StorageDataSource(val id: ResourceLocation, val path: NbtPathArgument.NbtPath): DataSource {
+        private class StorageDataSource(val id: Identifier, val path: NbtPathArgument.NbtPath): DataSource {
             override fun getNbtElement(source: CommandSourceStack): Tag {
                 return DataCommands.getSingleTag(path, ReflectUtil.newInstance(StorageDataAccessor::class.java, source.server.commandStorage, id).data)
             }
@@ -535,8 +535,8 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
         private val PLAYERS_GET_NULL_EXCEPTION = Dynamic2CommandExceptionType { objective: Any?, target: Any? ->
             Component.translatable(
                 "commands.scoreboard.players.get.null",
-                objective,
-                target
+                objective ?: "null",
+                target ?: "null"
             )
         }
     }

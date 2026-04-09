@@ -1,13 +1,14 @@
 package net.gunivers.sniffer.mixin;
 
 import com.mojang.brigadier.CommandDispatcher;
+import net.gunivers.sniffer.accessor.MacroFunctionUniqueAccessor;
 import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.functions.InstantiatedFunction;
 import net.minecraft.commands.functions.MacroFunction;
 import net.minecraft.commands.functions.PlainTextFunction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -31,7 +32,7 @@ import java.util.List;
 @Mixin(MacroFunction.class)
 public abstract class MacroFunctionMixin<T extends ExecutionCommandSource<T>> implements MacroFunctionUniqueAccessor {
 
-    @Shadow public abstract ResourceLocation id();
+    @Shadow public abstract Identifier id();
 
     /** Stores the NBT compound containing macro arguments */
     @Unique private CompoundTag arguments;
@@ -89,7 +90,7 @@ public abstract class MacroFunctionMixin<T extends ExecutionCommandSource<T>> im
     private void onSubstituteAndParse(List<String> varNames, List<String> arguments, CommandDispatcher<T> dispatcher, CallbackInfoReturnable<InstantiatedFunction<T>> cir){
         PlainTextFunction<T> function = (PlainTextFunction<T>) cir.getReturnValue();
         ReflectUtil.set(function, "arguments", CompoundTag.class, this.arguments);
-        ReflectUtil.set(function, "functionIdentifier", ResourceLocation.class, this.id());
+        ReflectUtil.set(function, "functionIdentifier", Identifier.class, this.id());
         ReflectUtil.set(function, "originalMacro", MacroFunction.class, this);
         cir.setReturnValue(function);
     }

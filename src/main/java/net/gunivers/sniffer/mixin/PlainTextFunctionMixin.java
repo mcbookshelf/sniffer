@@ -1,11 +1,12 @@
 package net.gunivers.sniffer.mixin;
 
+import net.gunivers.sniffer.accessor.PlainTextFunctionUniqueAccessor;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.UnboundEntryAction;
 import net.minecraft.commands.functions.MacroFunction;
 import net.minecraft.commands.functions.PlainTextFunction;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -52,15 +53,15 @@ public class PlainTextFunctionMixin<T extends ExecutionCommandSource<T>> impleme
     }
 
     @Unique
-    private ResourceLocation functionIdentifier;
+    private Identifier functionIdentifier;
 
     @Override
-    public ResourceLocation getFunctionIdentifier() {
+    public Identifier getFunctionIdentifier() {
         return functionIdentifier;
     }
 
     @Override
-    public void setFunctionIdentifier(ResourceLocation functionIdentifier) {
+    public void setFunctionIdentifier(Identifier functionIdentifier) {
         this.functionIdentifier = functionIdentifier;
     }
 

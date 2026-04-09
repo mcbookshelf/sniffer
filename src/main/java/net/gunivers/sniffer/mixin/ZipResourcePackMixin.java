@@ -3,7 +3,7 @@ package net.gunivers.sniffer.mixin;
 import com.mojang.logging.LogUtils;
 import net.gunivers.sniffer.dap.RealPath;
 import net.gunivers.sniffer.dap.ScopeManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.FilePackResources;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackType;
@@ -62,7 +62,7 @@ public class ZipResourcePackMixin {
                     String string3 = zipEntry.getName();
                     if (string3.startsWith(string2)) {
                         String string4 = string3.substring(string.length());
-                        ResourceLocation identifier = ResourceLocation.tryBuild(namespace, string4);
+                        Identifier identifier = Identifier.tryBuild(namespace, string4);
                         if (identifier != null) {
                             if(identifier.getPath().endsWith(".mcfunction")) {
                                 ScopeManager.get().savePath(Path.of(zipFileOpt.getName(), string3), identifier, RealPath.Kind.ZIP);

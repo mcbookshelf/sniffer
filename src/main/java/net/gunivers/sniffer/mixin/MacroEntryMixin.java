@@ -3,11 +3,12 @@ package net.gunivers.sniffer.mixin;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.brigadier.CommandDispatcher;
+import net.gunivers.sniffer.accessor.MacroEntryUniqueAccessor;
 import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.UnboundEntryAction;
 import net.minecraft.commands.functions.MacroFunction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
@@ -68,7 +69,7 @@ public class MacroEntryMixin<T extends ExecutionCommandSource<T>> implements Mac
      * @return The modified command action with source information attached
      */
     @WrapMethod(method = "instantiate")
-    UnboundEntryAction<T> instantiate(List<String> args, CommandDispatcher<T> dispatcher, ResourceLocation id, Operation<UnboundEntryAction<T>> original) {
+    UnboundEntryAction<T> instantiate(List<String> args, CommandDispatcher<T> dispatcher, Identifier id, Operation<UnboundEntryAction<T>> original) {
         var result = original.call(args, dispatcher, id);
         ReflectUtil.invoke(result, "setSourceFunction", id.toString());
         int line = getLine();

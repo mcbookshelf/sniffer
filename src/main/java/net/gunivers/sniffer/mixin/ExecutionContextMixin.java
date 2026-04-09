@@ -1,6 +1,8 @@
 package net.gunivers.sniffer.mixin;
 
 import kotlin.Pair;
+import net.gunivers.sniffer.accessor.ExecutionContextUniqueAccessor;
+import net.gunivers.sniffer.accessor.UnboundUniqueAccessor;
 import net.gunivers.sniffer.command.FunctionInAction;
 import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.commands.CommandResultCallback;
@@ -19,7 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
@@ -63,7 +65,7 @@ abstract public class ExecutionContextMixin<T> implements ExecutionContextUnique
 
     @Shadow @Final private int commandLimit;
 
-    @Shadow @Final private Profiler profiler;
+    @Shadow @Final private ProfilerFiller profiler;
 
     @Shadow private int commandQuota;
 

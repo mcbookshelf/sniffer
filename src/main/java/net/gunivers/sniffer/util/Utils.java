@@ -5,7 +5,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.functions.PlainTextFunction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 
 /**
@@ -23,10 +23,10 @@ public class Utils {
      * that contains the function's identifier.
      *
      * @param function The ExpandedMacro function to get the ID from
-     * @return The ResourceLocation of the function, or a fallback identifier if not found
+     * @return The Identifier of the function, or a fallback identifier if not found
      */
-    public static ResourceLocation getId(PlainTextFunction<?> function) {
-        return ReflectUtil.getT(function, "functionIdentifier", ResourceLocation.class).onFailure(LOGGER::error).getDataOrElse(ResourceLocation.parse("foo:bar"));
+    public static Identifier getId(PlainTextFunction<?> function) {
+        return ReflectUtil.getT(function, "functionIdentifier", Identifier.class).onFailure(LOGGER::error).getDataOrElse(Identifier.parse("foo:bar"));
     }
 
     private static final String MESSAGE_PREFIX = "[Sniffer] ";

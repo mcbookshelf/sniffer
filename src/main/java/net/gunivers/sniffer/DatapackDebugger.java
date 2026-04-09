@@ -11,7 +11,7 @@ import net.gunivers.sniffer.dap.DebuggerState;
 import net.gunivers.sniffer.dap.ScopeManager;
 import net.gunivers.sniffer.dap.WebSocketServer;
 import net.gunivers.sniffer.debugcmd.*;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
 import org.glassfish.tyrus.server.Server;
 import org.slf4j.Logger;
@@ -114,12 +114,12 @@ public class DatapackDebugger implements ModInitializer {
 
 		// Register custom argument types
 		ArgumentTypeRegistry.registerArgumentType(
-				ResourceLocation.tryBuild("sniffer", "log"),
+				Identifier.tryBuild("sniffer", "log"),
 				LogArgumentType.class,
 				SingletonArgumentInfo.contextFree(LogArgumentType::log)
 		);
 		ArgumentTypeRegistry.registerArgumentType(
-				ResourceLocation.tryBuild("sniffer", "expr"),
+				Identifier.tryBuild("sniffer", "expr"),
 				ExprArgumentType.class,
 				SingletonArgumentInfo.contextFree(ExprArgumentType::expr)
 		);
