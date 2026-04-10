@@ -5,27 +5,27 @@
 	"name": "Sniffer",
 	"description": "A mod that allows debugging datapacks with breakpoints.",
 	"authors": [
-		"Gunivers",
+		"Bookshelf",
 		"theogiraudet",
 		"Alumopper"
 	],
 	"contact": {
 		"homepage": "https://github.com/mcbookshelf/sniffer/",
 		"sources": "https://github.com/mcbookshelf/sniffer/",
-		"issues": "https://github.com/mcbookshelf/sniffer//issues"
+		"issues": "https://github.com/mcbookshelf/sniffer/issues"
 	},
 	"license": "MPL-2.0",
 	"icon": "assets/sniffer/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-          "net.gunivers.sniffer.DatapackDebugger"
+          "dev.mcbookshelf.sniffer.Sniffer"
 		],
 		"client": [
-          "net.gunivers.sniffer.DatapackBreakpointClient"
+			"dev.mcbookshelf.sniffer.client.SnifferClient"
 		],
 		"modmenu": [
-          "net.gunivers.sniffer.config.ModMenuIntegration"
+			"dev.mcbookshelf.sniffer.client.config.ModMenuIntegration"
 		]
 	},
 	"mixins": [

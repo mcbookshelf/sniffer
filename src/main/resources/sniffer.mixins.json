@@ -1,27 +1,20 @@
 {
   "required": true,
-  "package": "net.gunivers.sniffer.mixin",
+  "package": "dev.mcbookshelf.sniffer.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
-    "ExecutionContextMixin",
+    "UnboundDebugMixin",
+    "FunctionParsingMixin",
     "CallFunctionMixin",
-    "ServerFunctionManagerAccessors",
-    "CommandFunctionMixin",
-    "PathPackResourcesPackMixin",
-    "PlainTextFunctionMixin",
-    "FallthroughTaskMixin",
-    "ExecuteCommandMixin",
     "FrameMixin",
-    "FunctionBuilderMixin",
-    "ServerFunctionLibraryAccessors",
-    "MacroFunctionMixin",
-    "SingleCommandActionMixin",
-    "UnboundMixin",
-    "ContinuationTaskAccessors",
-    "MacroEntryMixin",
-    "ZipResourcePackMixin"
+    "InitialFunctionCallMixin",
+    "MacroInstantiationMixin",
+    "PathPackResourcesAccessorMixin",
+    "FilePackResourcesAccessorMixin",
+    "ServerFunctionManagerAccessors",
+    "ServerFunctionLibraryAccessors"
   ],
   "injectors": {
     "defaultRequire": 1
-	}
+  }
 }
