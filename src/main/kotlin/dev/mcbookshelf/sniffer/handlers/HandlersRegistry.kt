@@ -1,6 +1,6 @@
 package dev.mcbookshelf.sniffer.handlers
 
-import dev.mcbookshelf.sniffer.state.EvaluationVariableStore
+import dev.mcbookshelf.sniffer.state.EvaluationSession
 import dev.mcbookshelf.sniffer.state.ScopeManager
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.state.BreakpointManager
@@ -19,7 +19,7 @@ import dev.mcbookshelf.sniffer.state.BreakpointManager
  */
 fun buildHandlers(): List<Handler<*>> {
     val scopeManager = ScopeManager.get()
-    val evaluationStore = EvaluationVariableStore
+    val evaluationSession = EvaluationSession(scopeManager.registry)
 
     return listOf(
         // Stepping / execution control
@@ -39,8 +39,8 @@ fun buildHandlers(): List<Handler<*>> {
         SetBreakpointsHandler(BreakpointManager),
         GetStackTraceHandler(scopeManager),
         GetScopesHandler(scopeManager),
-        ResolveVariablesHandler(scopeManager, evaluationStore),
-        EvaluateHandler(scopeManager, evaluationStore),
+        ResolveVariablesHandler(scopeManager),
+        EvaluateHandler(scopeManager, evaluationSession),
         GetSourceHandler(),
     )
 }

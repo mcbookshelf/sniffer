@@ -1,46 +1,50 @@
 package dev.mcbookshelf.sniffer.state
 
-import com.google.common.base.Suppliers
 import net.minecraft.commands.ExecutionCommandSource
 import net.minecraft.nbt.CompoundTag
-import net.minecraft.resources.Identifier
-import java.nio.file.Path
 import java.util.Optional
-import java.util.Stack
-import java.util.function.Supplier
 
 /**
- * Manages the debug scope stack (call hierarchy) and variable resolution.
+ * Owns the debug scope stack (call hierarchy) and routes variable lookups
+ * through the unified [VariableRegistry].
+ *
+ * Each [DebugScope] is itself registered as a [VariableNode] in the registry,
+ * so the same `variables/{reference}` request resolves both scope-roots and
+ * nested variables without any ID-range branching.
  *
  * @author theogiraudet
  */
 class ScopeManager private constructor() {
 
+    val registry: VariableRegistry = VariableRegistry()
+
     /**
-     * Represents a debug scope during execution.
-     * A scope contains information about the currently executing function,
-     * its variables, and its position in the call stack.
+     * Represents a debug scope during execution. The scope owns a root
+     * [VariableNode] in [ScopeManager.registry]; that node's children are
+     * the root variables (executor, location, macro) built lazily by
+     * [VariableManager.buildRootVariables].
      */
     class DebugScope internal constructor(
         private val parent: DebugScope?,
         val function: String,
         val executor: ExecutionCommandSource<*>,
-        val macroVariables: CompoundTag?
+        val macroVariables: CompoundTag?,
+        private val registry: VariableRegistry,
     ) {
         val path: RealPath? = FunctionPathRegistry.getRealPath(function)
         var line: Int = -2
-        val id: Int = nextId++
-        private val variables: Supplier<Map<Int, DebuggerVariable>> = Suppliers.memoize {
-            val sourceVars = VariableManager.convertCommandSource(executor, nextId)
-            if (macroVariables != null) {
-                val macro = VariableManager.convertNbtCompound("macro", macroVariables, nextId + sourceVars.size, true)
-                sourceVars.putAll(macro)
+
+        private val node: VariableNode = registry.register { id ->
+            VariableNode(id, "Function", function, isRoot = false) { reg ->
+                VariableManager.buildRootVariables(executor, macroVariables, reg)
             }
-            nextId += sourceVars.size
-            sourceVars
         }
 
-        fun getVariables(): List<DebuggerVariable> = variables.get().values.toList()
+        val id: Int get() = node.id
+
+        fun rootVariables(): List<VariableNode> = node.children(registry)
+
+        fun invalidate() = node.invalidate(registry)
 
         val callerFunction: Optional<String>
             get() = Optional.ofNullable(parent).map { it.function }
@@ -48,15 +52,12 @@ class ScopeManager private constructor() {
         val callerLine: Optional<Int>
             get() = Optional.ofNullable(parent).map { it.line }
 
-        val rootVariables: List<DebuggerVariable>
-            get() = variables.get().values.filter { it.isRoot }.toList()
-
         fun getOptionalPath(): Optional<RealPath> = Optional.ofNullable(path)
     }
 
-    private val debugScopeStack = Stack<DebugScope>()
+    private val stack = ArrayDeque<DebugScope>()
+    private val scopesById = HashMap<Int, DebugScope>()
     private var _currentScope: DebugScope? = null
-    private val scopeIds = HashSet<Int>()
 
     /**
      * The currently active scope, wrapped in an Optional for Java interop.
@@ -64,69 +65,62 @@ class ScopeManager private constructor() {
     val currentScope: Optional<DebugScope>
         get() = Optional.ofNullable(_currentScope)
 
-    @Deprecated("Use FunctionPathRegistry.savePath directly", ReplaceWith("FunctionPathRegistry.savePath(path, id, kind)"))
-    fun savePath(path: Path, id: Identifier, kind: RealPath.Kind) = FunctionPathRegistry.savePath(path, id, kind)
-
-    @Deprecated("Use FunctionPathRegistry.getPath directly", ReplaceWith("FunctionPathRegistry.getPath(mcpath)"))
-    fun getPath(mcpath: String): Optional<String> = FunctionPathRegistry.getPath(mcpath)
-
     @JvmOverloads
     fun newScope(function: String, executor: ExecutionCommandSource<*>, macroVariables: CompoundTag? = null) {
-        val scope = DebugScope(_currentScope, function, executor, macroVariables)
-        scopeIds.add(scope.id)
-        debugScopeStack.push(scope)
+        val scope = DebugScope(_currentScope, function, executor, macroVariables, registry)
+        stack.addLast(scope)
+        scopesById[scope.id] = scope
         _currentScope = scope
     }
 
     fun unscope() {
-        if (debugScopeStack.isEmpty()) return
-        debugScopeStack.pop()
-        scopeIds.remove(_currentScope!!.id)
-        if (debugScopeStack.isEmpty()) {
-            _currentScope = null
+        val top = stack.removeLastOrNull() ?: return
+        top.invalidate()
+        registry.drop(listOf(top.id))
+        scopesById.remove(top.id)
+        _currentScope = stack.lastOrNull()
+        if (stack.isEmpty()) {
             // Execution finished — clear debugging state so the HUD icon disappears
             SteppingState.isDebugging = false
-        } else {
-            _currentScope = debugScopeStack.peek()
         }
     }
 
-    fun count(): Int = debugScopeStack.size
+    fun count(): Int = stack.size
 
-    fun isEmpty(): Boolean = debugScopeStack.isEmpty()
+    fun isEmpty(): Boolean = stack.isEmpty()
 
     fun clear() {
-        debugScopeStack.clear()
-        scopeIds.clear()
-        nextId = 1
+        stack.clear()
+        scopesById.clear()
+        _currentScope = null
+        registry.clear()
     }
 
-    @Deprecated("Use FunctionPathRegistry.clear directly", ReplaceWith("FunctionPathRegistry.clear()"))
-    fun clearFunctionPaths() = FunctionPathRegistry.clear()
+    fun getScope(id: Int): Optional<DebugScope> = Optional.ofNullable(scopesById[id])
 
-    fun getScope(id: Int): Optional<DebugScope> =
-        debugScopeStack.stream().filter { it.id == id }.findFirst()
+    /**
+     * Returns the children of the node referenced by [id] — either a scope's
+     * root variables or a nested variable's children. Empty optional if [id]
+     * is unknown.
+     */
+    fun getVariables(id: Int): Optional<List<VariableNode>> {
+        val node = registry.get(id) ?: return Optional.empty()
+        return Optional.of(node.children(registry))
+    }
 
-    private fun getRootVariables(scope: DebugScope): List<DebuggerVariable> =
-        scope.rootVariables
-
-    fun getVariables(id: Int): Optional<List<DebuggerVariable>> {
-        if (id in scopeIds) {
-            return debugScopeStack.stream().filter { it.id == id }.findFirst().map { getRootVariables(it) }
-        }
-        return debugScopeStack.stream()
-            .flatMap { it.getVariables().stream() }
-            .filter { it.id == id }
-            .findFirst()
-            .map { it.children }
+    /**
+     * Drops memoized variable subtrees for every live scope so the next
+     * DAP `variables` request rebuilds from current engine state. Called
+     * by [UnboundDebugMixin] immediately before a pause.
+     */
+    fun refreshForPause() {
+        for (scope in stack) scope.invalidate()
     }
 
     val debugScopes: List<DebugScope>
-        get() = debugScopeStack.reversed()
+        get() = stack.reversed()
 
     companion object {
-        private var nextId = 1
-
         @JvmStatic
         val instance: ScopeManager by lazy { ScopeManager() }
 

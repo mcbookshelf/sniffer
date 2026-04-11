@@ -1,6 +1,7 @@
 package dev.mcbookshelf.sniffer.handlers
 
-import dev.mcbookshelf.sniffer.state.EvaluationVariableStore
+import dev.mcbookshelf.sniffer.state.EvaluationSession
+import dev.mcbookshelf.sniffer.state.NbtVariableBuilder
 import dev.mcbookshelf.sniffer.state.ScopeManager
 import dev.mcbookshelf.sniffer.state.VariableManager
 import dev.mcbookshelf.sniffer.dispatch.Context
@@ -16,18 +17,20 @@ import net.minecraft.nbt.CompoundTag
  *
  * Parses the expression via [VariableManager.evaluate], resolves it against
  * the current scope's executor, and — if the result is a [CompoundTag] —
- * stores the expanded variables in [EvaluationVariableStore] so that
- * subsequent [ResolveVariablesHandler] calls can expand them.
+ * registers a new [dev.mcbookshelf.sniffer.state.VariableNode] subtree with
+ * the shared registry so that subsequent [ResolveVariablesHandler] calls can
+ * expand it. The [EvaluationSession] tracks the root id per expression so a
+ * repeat evaluation drops the previous subtree first.
  */
 class EvaluateHandler(
     private val scopeManager: ScopeManager,
-    private val evaluationStore: EvaluationVariableStore,
+    private val evaluationSession: EvaluationSession,
 ) : Handler<EvaluateInput> {
 
     override val inputType = EvaluateInput::class
 
     override fun handle(input: EvaluateInput, ctx: Context): Output {
-        evaluationStore.clearPrevious(input.expression)
+        evaluationSession.clearPrevious(input.expression)
 
         val parseResult = VariableManager.evaluate(input.expression)
         val debugData = parseResult.getOrElse { ex ->
@@ -45,10 +48,9 @@ class EvaluateHandler(
         return try {
             val value = debugData.get(source)
             if (value is CompoundTag) {
-                val ref = evaluationStore.peekNextRef()
-                val vars = VariableManager.convertNbtCompound("debug", value, ref, true)
-                evaluationStore.store(input.expression, vars)
-                EvaluateOutput(result = value.toString(), variablesReference = ref)
+                val node = NbtVariableBuilder.build("debug", value, isRoot = true, registry = scopeManager.registry)
+                evaluationSession.store(input.expression, node)
+                EvaluateOutput(result = value.toString(), variablesReference = node.id)
             } else {
                 EvaluateOutput(result = value.toString(), variablesReference = 0)
             }
