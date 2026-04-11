@@ -3,7 +3,7 @@ package dev.mcbookshelf.sniffer.mixin;
 import dev.mcbookshelf.sniffer.accessor.UnboundUniqueAccessor;
 import dev.mcbookshelf.sniffer.state.BreakpointManager;
 import dev.mcbookshelf.sniffer.state.BreakpointTrigger;
-import dev.mcbookshelf.sniffer.state.ExecutionLock;
+import dev.mcbookshelf.sniffer.state.PausedExecutionStore;
 import dev.mcbookshelf.sniffer.state.ScopeManager;
 import dev.mcbookshelf.sniffer.state.StepType;
 import dev.mcbookshelf.sniffer.state.SteppingState;
@@ -11,6 +11,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.ExecutionContext;
 import net.minecraft.commands.execution.Frame;
+import net.minecraft.commands.execution.UnboundEntryAction;
 import net.minecraft.commands.execution.tasks.BuildContexts;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -23,8 +24,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <ul>
  *   <li>Adds source-location fields ({@code sourceFunction}, {@code sourceLine})</li>
  *   <li>Intercepts every function-line execution to check breakpoints and stepping</li>
- *   <li>Blocks the server thread via {@link ExecutionLock} when a pause is needed</li>
+ *   <li>On a pause, drains the live {@link ExecutionContext} into
+ *       {@link PausedExecutionStore} so the server tick can return immediately</li>
  * </ul>
+ *
+ * <p>Unlike a thread-blocking pause, this implementation lets the world keep
+ * running while the debugger is paused. Players can issue commands and other
+ * datapack functions can run on subsequent ticks. Nested executions started
+ * while paused are intentionally <em>not</em> debugged — see
+ * {@link PausedExecutionStore#isStashedContext}.
  */
 @Mixin(BuildContexts.Unbound.class)
 public class UnboundDebugMixin implements UnboundUniqueAccessor {
@@ -61,24 +69,39 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
 
     /**
      * Injected at the head of {@code Unbound.execute(T, ExecutionContext, Frame)}.
-     * This fires for every function line, regardless of whether it was queued
-     * via {@code ContinuationTask} or directly (for 1–2 line functions).
+     * Fires for every function line.
      *
-     * <p>Checks (in order):
+     * <p>Order of checks:
      * <ol>
      *   <li>Skip if depth == 0 (top-level, not inside a function)</li>
-     *   <li>Skip if debug mode is globally off</li>
-     *   <li>Update current scope line number</li>
-     *   <li>Check for breakpoint at current location</li>
-     *   <li>Check step-pause condition (depth-based)</li>
-     *   <li>If either triggers, block via {@link ExecutionLock#pauseExecution}</li>
+     *   <li>Skip if a paused session exists and this isn't the same context —
+     *       commands run by the user during a pause must not re-trigger the
+     *       debugger</li>
+     *   <li>Check breakpoints and stepping</li>
+     *   <li>If a pause is required, drain the context into
+     *       {@link PausedExecutionStore} and return — the queue is empty so
+     *       {@code runCommandQueue} exits cleanly</li>
      * </ol>
      */
-    @Inject(method = "execute", at = @At("HEAD"))
+    @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     private void onExecute(ExecutionCommandSource<?> sender, ExecutionContext<?> context, Frame frame, CallbackInfo ci) {
         if (frame.depth() <= 0) return;
         if (sourceFunction == null) return;
         if (sourceLine < 0) return;
+
+        // First entry of a resumed session: skip checks exactly once so the
+        // line we paused *before* runs without re-triggering the same
+        // breakpoint/step.
+        if (PausedExecutionStore.skipNextCheck) {
+            PausedExecutionStore.skipNextCheck = false;
+            return;
+        }
+
+        // Nested execution while paused: skip all debug checks so user-issued
+        // commands run normally without interfering with the suspended session.
+        if (PausedExecutionStore.isPaused() && !PausedExecutionStore.isStashedContext(context)) {
+            return;
+        }
 
         boolean shouldPause = false;
 
@@ -101,7 +124,15 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
             // entity state (position, NBT, …) on the upcoming pause.
             ScopeManager.Companion.get().refreshForPause();
             BreakpointTrigger.INSTANCE.trigger(css);
-            ExecutionLock.INSTANCE.pauseExecution();
+            // Drain the queue, re-queue *this* entry as the first thing to
+            // replay on resume, and cancel — so the body of this Unbound.execute
+            // does NOT run now. The line will run when the entry is replayed
+            // (with skipNextCheck preventing the same trigger from re-firing).
+            // BuildContexts.Unbound implements UnboundEntryAction (not EntryAction);
+            // PausedExecutionStore.stash binds it to the sender to produce a real
+            // EntryAction for the replay queue.
+            PausedExecutionStore.stash(context, (UnboundEntryAction<?>) (Object) this, sender, frame);
+            ci.cancel();
         }
     }
 

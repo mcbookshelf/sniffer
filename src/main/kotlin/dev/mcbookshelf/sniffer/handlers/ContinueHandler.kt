@@ -6,16 +6,16 @@ import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.input.ContinueInput
 import dev.mcbookshelf.sniffer.state.DebugEventBus
-import dev.mcbookshelf.sniffer.state.ExecutionLock
+import dev.mcbookshelf.sniffer.state.PausedExecutionStore
 import dev.mcbookshelf.sniffer.state.SteppingState
 import net.minecraft.network.chat.Component
 
 /**
  * Resumes execution from the current pause point until the next breakpoint.
  *
- * Unfreezes the tick-rate manager, notifies DAP clients via [DebugEventBus],
- * and signals [ExecutionLock] to wake the blocked server thread. The thread
- * resumes the execution loop naturally — no queue draining needed.
+ * Clears stepping state, notifies DAP clients via [DebugEventBus], and
+ * asks [PausedExecutionStore] to replay the suspended execution on the
+ * next server tick.
  */
 class ContinueHandler : Handler<ContinueInput> {
 
@@ -27,16 +27,12 @@ class ContinueHandler : Handler<ContinueInput> {
             return Ack
         }
 
-        // Clear debugging state — the mixin will not pause until the next breakpoint
         SteppingState.isDebugging = false
         SteppingState.stepsRemaining = 0
 
-        // Unfreeze and notify DAP
-        ctx.source.server.tickRateManager().setFrozen(false)
         DebugEventBus.fireContinue()
 
-        // Wake the blocked server thread
-        ExecutionLock.resume()
+        PausedExecutionStore.scheduleResume(ctx.source.server)
 
         return Ack
     }

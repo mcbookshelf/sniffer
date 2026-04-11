@@ -5,11 +5,14 @@ import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import dev.mcbookshelf.sniffer.Sniffer
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
 import dev.mcbookshelf.sniffer.input.StepInInput
+import dev.mcbookshelf.sniffer.network.SetDebugModePayload
+import dev.mcbookshelf.sniffer.state.DebugToggles
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.ClickEvent
@@ -28,6 +31,13 @@ class SnifferClient : ClientModInitializer {
 
     override fun onInitializeClient() {
         HudElementRegistry.addLast(Identifier.parse("sniffer:debug_icon"), DebugHudOverlay())
+
+        ClientPlayNetworking.registerGlobalReceiver(SetDebugModePayload.TYPE) { payload, _ ->
+            DebugToggles.debugMode = payload.enabled
+        }
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
+            DebugToggles.debugMode = false
+        }
 
         val stepInto = KeyMappingHelper.registerKeyMapping(KeyMapping(
             "sniffer.step",
