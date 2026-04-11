@@ -1,7 +1,7 @@
 package dev.mcbookshelf.sniffer.dap
 
-import dev.mcbookshelf.sniffer.state.DebuggerVariable
 import dev.mcbookshelf.sniffer.state.RealPath
+import dev.mcbookshelf.sniffer.state.VariableNode
 import dev.mcbookshelf.sniffer.util.Extension.addSnifferPrefix
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.IInput
@@ -245,9 +245,7 @@ class DapServer : IDebugProtocolServer {
                 ResolveVariablesInput(args.variablesReference, args.start, args.count)
             ) as ResolveVariablesOutput
 
-            val dapVars = output.variables
-                .map { toDapVariable(it) }
-                .sortedBy { it.variablesReference }
+            val dapVars = output.variables.map { toDapVariable(it) }
 
             VariablesResponse().apply {
                 variables = dapVars.toTypedArray()
@@ -357,12 +355,11 @@ class DapServer : IDebugProtocolServer {
         return source
     }
 
-    private fun toDapVariable(variable: DebuggerVariable): Variable {
+    private fun toDapVariable(variable: VariableNode): Variable {
         return Variable().apply {
             name = variable.name
             value = variable.value
-            variablesReference = if (variable.children.isNotEmpty()) variable.id else 0
-            indexedVariables = variable.children.size
+            variablesReference = if (variable.hasChildren) variable.id else 0
             presentationHint = VariablePresentationHint().apply {
                 kind = "data"
             }

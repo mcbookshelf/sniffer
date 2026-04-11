@@ -1,6 +1,5 @@
 package dev.mcbookshelf.sniffer.handlers
 
-import dev.mcbookshelf.sniffer.state.EvaluationVariableStore
 import dev.mcbookshelf.sniffer.state.ScopeManager
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
@@ -12,26 +11,21 @@ import kotlin.math.min
 /**
  * Resolves variables for a given reference.
  *
- * Variables can come from two sources:
- * - **Scope variables** (reference < threshold) — looked up in [ScopeManager]
- * - **Expression variables** (reference >= threshold) — looked up in [EvaluationVariableStore]
+ * Scope roots and nested variables share one [dev.mcbookshelf.sniffer.state.VariableRegistry],
+ * so resolution is a single lookup. Children are materialized lazily by
+ * [dev.mcbookshelf.sniffer.state.VariableNode.children] on first request.
  *
  * Applies optional pagination via [ResolveVariablesInput.start] and
  * [ResolveVariablesInput.count].
  */
 class ResolveVariablesHandler(
     private val scopeManager: ScopeManager,
-    private val evaluationStore: EvaluationVariableStore,
 ) : Handler<ResolveVariablesInput> {
 
     override val inputType = ResolveVariablesInput::class
 
     override fun handle(input: ResolveVariablesInput, ctx: Context): Output {
-        var variables = if (evaluationStore.isExpressionVariable(input.variablesReference)) {
-            evaluationStore.getChildren(input.variablesReference)
-        } else {
-            scopeManager.getVariables(input.variablesReference).orElseGet { ArrayList() }
-        }
+        var variables = scopeManager.getVariables(input.variablesReference).orElseGet { emptyList() }
 
         val start = (input.start ?: 0).coerceIn(0, variables.size)
         val count = input.count ?: variables.size

@@ -97,6 +97,9 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
         ScopeManager.Companion.get().getCurrentScope().ifPresent(scope -> scope.setLine(sourceLine));
 
         if (shouldPause && sender instanceof CommandSourceStack css) {
+            // Drop memoized variable subtrees so the DAP client sees fresh
+            // entity state (position, NBT, …) on the upcoming pause.
+            ScopeManager.Companion.get().refreshForPause();
             BreakpointTrigger.INSTANCE.trigger(css);
             ExecutionLock.INSTANCE.pauseExecution();
         }

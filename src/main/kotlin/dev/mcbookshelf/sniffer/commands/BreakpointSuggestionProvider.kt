@@ -23,7 +23,7 @@ object BreakpointSuggestionProvider : SuggestionProvider<CommandSourceStack> {
             return builder.buildFuture()
         }
         return try {
-            val variables = scope.get().rootVariables
+            val variables = scope.get().rootVariables()
             for (variable in variables) {
                 builder.suggest(variable.name)
             }
