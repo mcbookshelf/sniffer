@@ -97,8 +97,8 @@ class Sniffer : ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPED.register { _ ->
             logger.info("Shutting down debugger state")
             try {
-                // Release the execution lock first so the server thread can exit
-                ExecutionLock.forceRelease()
+                // Drop any paused execution before tearing the rest down.
+                PausedExecutionStore.discard()
                 DebugEventBus.fireShutdown()
                 BreakpointManager.clear()
                 DebugEventBus.clear()

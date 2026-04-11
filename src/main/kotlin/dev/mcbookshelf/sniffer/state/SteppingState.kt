@@ -66,13 +66,12 @@ object SteppingState {
     }
 
     /**
-     * Full stepping reset: clears stepping counters, resets the execution
-     * lock, and restores the debug toggle. Groups the three calls that
-     * always happen together during lifecycle transitions.
+     * Full stepping reset: clears stepping counters and drops any
+     * paused execution. Called during lifecycle transitions.
      */
     @JvmStatic
     fun resetAll() {
         reset()
-        ExecutionLock.reset()
+        PausedExecutionStore.discard()
     }
 }
