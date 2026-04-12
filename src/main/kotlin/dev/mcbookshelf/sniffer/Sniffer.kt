@@ -12,7 +12,11 @@ import dev.mcbookshelf.sniffer.commands.*
 import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dap.WebSocketServer
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
+import dev.mcbookshelf.sniffer.network.AuthPromptPayload
+import dev.mcbookshelf.sniffer.network.AuthResponsePayload
+import dev.mcbookshelf.sniffer.network.SetDapConnectedPayload
 import dev.mcbookshelf.sniffer.network.SetDebugModePayload
+import dev.mcbookshelf.sniffer.network.SetDebuggingPayload
 import dev.mcbookshelf.sniffer.state.*
 import net.minecraft.commands.synchronization.SingletonArgumentInfo
 import net.minecraft.core.Registry
@@ -66,9 +70,10 @@ class Sniffer : ModInitializer {
 
         // Load configuration
         DebuggerConfig.getInstance()
-        logger.info("Sniffer configured to run on localhost:{}/{}",
-            DebuggerConfig.getInstance().path,
-            DebuggerConfig.getInstance().port)
+        logger.info("Sniffer configured to run on {}:{}/{}",
+            DebuggerConfig.getInstance().host,
+            DebuggerConfig.getInstance().port,
+            DebuggerConfig.getInstance().path)
 
         // Reset and initialize debugger state
         ServerLifecycleEvents.SERVER_STARTED.register { server ->
@@ -79,7 +84,7 @@ class Sniffer : ModInitializer {
             ScopeManager.get().clear()
             SteppingState.resetAll()
             DebugModeState.clear()
-            ConnectionState.clientConnected = false
+            ConnectionState.setConnected(false)
             logger.info("Debugger state reset complete")
 
             // Build the v2 action dispatcher (shared between DAP and chat entrypoints)
@@ -104,6 +109,7 @@ class Sniffer : ModInitializer {
                 DebugEventBus.clear()
                 ScopeManager.get().clear()
                 SteppingState.resetAll()
+                PendingAuthRegistry.clearAll()
                 logger.info("Debugger state shutdown complete")
             } catch (e: Exception) {
                 logger.error("Error shutting down debugger state", e)
@@ -135,6 +141,16 @@ class Sniffer : ModInitializer {
         )
 
         PayloadTypeRegistry.clientboundPlay().register(SetDebugModePayload.TYPE, SetDebugModePayload.CODEC)
+        PayloadTypeRegistry.clientboundPlay().register(SetDapConnectedPayload.TYPE, SetDapConnectedPayload.CODEC)
+        PayloadTypeRegistry.clientboundPlay().register(SetDebuggingPayload.TYPE, SetDebuggingPayload.CODEC)
+        PayloadTypeRegistry.clientboundPlay().register(AuthPromptPayload.TYPE, AuthPromptPayload.CODEC)
+        PayloadTypeRegistry.serverboundPlay().register(AuthResponsePayload.TYPE, AuthResponsePayload.CODEC)
+
+        ServerPlayNetworking.registerGlobalReceiver(AuthResponsePayload.TYPE) { payload, context ->
+            val player = context.player()
+            // Receiver runs on the server thread, safe to touch the registry directly.
+            PendingAuthRegistry.resolve(player.uuid, payload.requestId, payload.accepted)
+        }
 
         // Resync each player's HUD mirror on (re)connect so the server-side
         // DebugModeState persistence survives a client disconnect.
@@ -142,6 +158,8 @@ class Sniffer : ModInitializer {
             val player = handler.player
             val enabled = DebugModeState.isEnabled(player.uuid)
             ServerPlayNetworking.send(player, SetDebugModePayload(enabled))
+            ServerPlayNetworking.send(player, SetDapConnectedPayload(ConnectionState.isConnected()))
+            ServerPlayNetworking.send(player, SetDebuggingPayload(SteppingState.isDebugging))
         }
 
         BreakPointCommand.onInitialize()

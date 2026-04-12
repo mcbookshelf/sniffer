@@ -16,6 +16,12 @@ import java.io.IOException
  */
 class DebuggerConfig {
 
+    var host: String = "localhost"
+        set(value) {
+            field = value
+            save()
+        }
+
     var port: Int = 25599
         set(value) {
             field = value
@@ -23,6 +29,18 @@ class DebuggerConfig {
         }
 
     var path: String = "dap"
+        set(value) {
+            field = value
+            save()
+        }
+
+    var authEnabled: Boolean = true
+        set(value) {
+            field = value
+            save()
+        }
+
+    var authPromptTimeoutSeconds: Int = 30
         set(value) {
             field = value
             save()

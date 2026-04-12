@@ -1,9 +1,9 @@
 package dev.mcbookshelf.sniffer.client
 
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
-import dev.mcbookshelf.sniffer.state.ConnectionState
+import dev.mcbookshelf.sniffer.client.state.ClientConnectionState
+import dev.mcbookshelf.sniffer.client.state.ClientDebuggingState
 import dev.mcbookshelf.sniffer.state.DebugToggles
-import dev.mcbookshelf.sniffer.state.SteppingState
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.renderer.RenderPipelines
@@ -27,10 +27,10 @@ class DebugHudOverlay : HudElement {
         val x = screenWidth - ICON_SIZE - MARGIN
         val y = MARGIN
 
-        val statusIcon = if (ConnectionState.clientConnected) CONNECTED_ICON else DISCONNECTED_ICON
+        val statusIcon = if (ClientConnectionState.connected) CONNECTED_ICON else DISCONNECTED_ICON
         graphics.blit(RenderPipelines.GUI_TEXTURED, statusIcon, x, y, 0f, 0f, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE)
 
-        if (SteppingState.isDebugging) {
+        if (ClientDebuggingState.debugging) {
             val bugX = x - ICON_SIZE - MARGIN
             graphics.blit(RenderPipelines.GUI_TEXTURED, BUG_ICON, bugX, y, 0f, 0f, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE)
         }

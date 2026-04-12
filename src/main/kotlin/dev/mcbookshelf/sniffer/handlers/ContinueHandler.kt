@@ -27,7 +27,7 @@ class ContinueHandler : Handler<ContinueInput> {
             return Ack
         }
 
-        SteppingState.isDebugging = false
+        SteppingState.setDebugging(false)
         SteppingState.stepsRemaining = 0
 
         DebugEventBus.fireContinue()
