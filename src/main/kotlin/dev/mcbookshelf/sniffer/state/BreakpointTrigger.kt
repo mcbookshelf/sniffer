@@ -29,7 +29,7 @@ object BreakpointTrigger {
             val bpId = BreakpointManager.getBreakpointId(fn, line).orElse(-1)
             DebugEventBus.fireStop(bpId, BREAKPOINT_REASON)
 
-            SteppingState.isDebugging = true
+            SteppingState.setDebugging(true)
             SteppingState.currSource = source
 
             LOGGER.debug("Breakpoint triggered at {}:{}", fn, line)

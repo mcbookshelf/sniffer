@@ -1,5 +1,6 @@
 package dev.mcbookshelf.sniffer.state
 
+import dev.mcbookshelf.sniffer.network.SetDebuggingPayload
 import net.minecraft.commands.CommandSourceStack
 
 
@@ -17,9 +18,27 @@ import net.minecraft.commands.CommandSourceStack
  */
 object SteppingState {
 
-    /** Whether execution is currently paused on a breakpoint/step. */
+    /**
+     * Whether execution is currently paused on a breakpoint/step.
+     *
+     * Read directly by `UnboundDebugMixin` (hence `@JvmField`); writes should
+     * go through [setDebugging] so every change is mirrored to clients via
+     * [SetDebuggingPayload] for the HUD bug icon.
+     */
     @JvmField
     var isDebugging: Boolean = false
+
+    /**
+     * Update [isDebugging] and broadcast the new value to every online
+     * player so the HUD bug overlay can appear/disappear in sync with
+     * paused execution.
+     */
+    @JvmStatic
+    fun setDebugging(value: Boolean) {
+        if (isDebugging == value) return
+        isDebugging = value
+        ConnectionState.broadcast(SetDebuggingPayload(value))
+    }
 
     /**
      * Remaining lines to execute before re-pausing. Decremented by
@@ -58,7 +77,7 @@ object SteppingState {
     /** Clear all stepping state — called on server start and on DAP disconnect. */
     @JvmStatic
     fun reset() {
-        isDebugging = false
+        setDebugging(false)
         stepsRemaining = 0
         stepType = StepType.STEP_IN
         stepDepth = -1

@@ -81,7 +81,7 @@ class ScopeManager private constructor() {
         _currentScope = stack.lastOrNull()
         if (stack.isEmpty()) {
             // Execution finished — clear debugging state so the HUD icon disappears
-            SteppingState.isDebugging = false
+            SteppingState.setDebugging(false)
         }
     }
 

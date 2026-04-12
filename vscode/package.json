@@ -95,6 +95,10 @@
                 "description": "The complete address of the debug server. Format: ws://hostname:port/path",
                 "default": "ws://localhost:25599/dap"
               },
+              "user": {
+                "type": "string",
+                "description": "Minecraft username to attach as (required for multiplayer). The server will prompt this player in-game to accept the debug session; the player must be online and an operator. In singleplayer, this field can be omitted."
+              },
               "pathMapping": {
                 "type": "object",
                 "description": "A mapping of remote paths to local paths to resolve source files"

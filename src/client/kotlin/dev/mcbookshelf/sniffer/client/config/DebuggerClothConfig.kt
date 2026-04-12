@@ -2,6 +2,8 @@ package dev.mcbookshelf.sniffer.client.config
 
 import me.shedaniel.clothconfig2.api.ConfigBuilder
 import dev.mcbookshelf.sniffer.config.DebuggerConfig
+import me.shedaniel.clothconfig2.impl.builders.ColorFieldBuilder
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 
@@ -34,19 +36,25 @@ object DebuggerClothConfig {
             Component.translatable("sniffer.config.category.main")
         )
 
-        // Reference holders for dynamic address text updates
-        var currentPort = config.port
-        var currentPath = config.path
-
-        val addressSupplier = {
-            val wsAddress = "ws://localhost:$currentPort/$currentPath"
-            Component.translatable("sniffer.config.server_address", wsAddress)
+        if (Minecraft.getInstance().currentServer != null) {
+            mainCategory.addEntry(
+                entryBuilder.startTextDescription(Component.translatable("sniffer.config.client_warning"))
+                    .setColor(0xFFFFFF55.toInt())
+                    .build()
+            )
         }
 
-        // Server address description
+        // Host entry
         mainCategory.addEntry(
-            entryBuilder.startTextDescription(addressSupplier())
-                .setTooltip(Component.translatable("sniffer.config.server_address.tooltip"))
+            entryBuilder.startStrField(
+                Component.translatable("sniffer.config.host"),
+                config.host
+            )
+                .setDefaultValue("localhost")
+                .setTooltip(Component.translatable("sniffer.config.host.tooltip"))
+                .setSaveConsumer { value ->
+                    config.host = value
+                }
                 .build()
         )
 
@@ -60,10 +68,7 @@ object DebuggerClothConfig {
                 .setTooltip(Component.translatable("sniffer.config.port.tooltip"))
                 .setMin(1024)
                 .setMax(65535)
-                .setSaveConsumer { value ->
-                    config.port = value
-                    currentPort = value
-                }
+                .setSaveConsumer { config.port = it }
                 .build()
         )
 
@@ -75,10 +80,33 @@ object DebuggerClothConfig {
             )
                 .setDefaultValue("dap")
                 .setTooltip(Component.translatable("sniffer.config.path.tooltip"))
-                .setSaveConsumer { value ->
-                    config.path = value
-                    currentPath = value
-                }
+                .setSaveConsumer { config.path = it }
+                .build()
+        )
+
+        // Auth enabled toggle
+        mainCategory.addEntry(
+            entryBuilder.startBooleanToggle(
+                Component.translatable("sniffer.config.authEnabled"),
+                config.authEnabled
+            )
+                .setDefaultValue(true)
+                .setTooltip(Component.translatable("sniffer.config.authEnabled.tooltip"))
+                .setSaveConsumer { value -> config.authEnabled = value }
+                .build()
+        )
+
+        // Auth prompt timeout
+        mainCategory.addEntry(
+            entryBuilder.startIntField(
+                Component.translatable("sniffer.config.authPromptTimeoutSeconds"),
+                config.authPromptTimeoutSeconds
+            )
+                .setDefaultValue(30)
+                .setTooltip(Component.translatable("sniffer.config.authPromptTimeoutSeconds.tooltip"))
+                .setMin(1)
+                .setMax(600)
+                .setSaveConsumer { value -> config.authPromptTimeoutSeconds = value }
                 .build()
         )
 

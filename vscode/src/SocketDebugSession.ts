@@ -131,10 +131,33 @@ abstract class DebugAdapter extends ProtocolServer {
     protected abstract createStream(address: string): NodeJS.ReadWriteStream;
 }
 
+// WebSocket close codes used by the Sniffer server. 1008 is the RFC 6455
+// "policy violation" code, which the server sends for every auth rejection
+// (missing/blank user param, player not online, not an op, prompt rejected,
+// prompt timed out, superseded).
+const WS_POLICY_VIOLATION = 1008;
+
+function formatConnectionError(
+    error: any,
+    closeCode: number | undefined,
+    closeReason: string | undefined,
+): string {
+    if (closeReason) {
+        if (closeCode === WS_POLICY_VIOLATION) {
+            return `Debug connection rejected by server — ${closeReason}.`;
+        }
+        return `Connection closed (${closeCode ?? 'unknown code'}): ${closeReason}`;
+    }
+    if (closeCode !== undefined) {
+        return `Connection closed (code ${closeCode}) before the handshake completed.`;
+    }
+    return error ? (error.message || JSON.stringify(error)) : 'Unknown error';
+}
+
 class WebsocketDebugAdapter extends DebugAdapter {
     protected createStream(address: string): NodeJS.ReadWriteStream {
         console.log(`Trying to connect to WebSocket server at: ${address}`);
-        
+
         try {
             // Formater l'adresse pour s'assurer qu'elle est valide
             let formattedAddress = address;
@@ -143,26 +166,43 @@ class WebsocketDebugAdapter extends DebugAdapter {
                 formattedAddress = `ws://${formattedAddress}`;
                 console.log(`Reformatted address to: ${formattedAddress}`);
             }
-            
-            const options = { 
+
+            const options = {
                 handshakeTimeout: SOCKET_TIMEOUT,
                 perMessageDeflate: false  // Disable compression for better compatibility
             };
-            
+
             console.log(`Connecting with options:`, options);
             const stream = WebSocketStream(formattedAddress, options);
-            
+
+            // Capture the WebSocket close frame (code + reason) so we can
+            // surface a clear message when the server rejects the connection.
+            // Without this, the user only sees "write after end" — the
+            // downstream error from the adapter trying to write to a socket
+            // the server closed with a 1008 VIOLATED_POLICY frame.
+            let closeCode: number | undefined;
+            let closeReason: string | undefined;
+            const ws: any = (stream as any).socket;
+            if (ws && typeof ws.on === 'function') {
+                ws.on('close', (code: number, reason: Buffer | string) => {
+                    closeCode = code;
+                    closeReason = reason
+                        ? (typeof reason === 'string' ? reason : reason.toString('utf8'))
+                        : undefined;
+                });
+            }
+
             stream.on('error', (error) => {
-                const errorMessage = error ? (error.message || JSON.stringify(error)) : 'Unknown error';
-                console.error(`WebSocket connection error: ${errorMessage}`);
-                vscode.window.showErrorMessage(`Failed to connect to debug server at ${formattedAddress}: ${errorMessage}`);
+                const message = formatConnectionError(error, closeCode, closeReason);
+                console.error(`WebSocket connection error: ${message}`);
+                vscode.window.showErrorMessage(`Cannot attach to debug server at ${formattedAddress}: ${message}`);
             });
-            
+
             stream.on('connect', () => {
                 console.log(`Successfully connected to WebSocket server at: ${formattedAddress}`);
                 vscode.window.showInformationMessage(`Connected to debug server at ${formattedAddress}`);
             });
-            
+
             return stream;
         } catch (error: any) {
             const errorMessage = error ? (error.message || JSON.stringify(error)) : 'Unknown error';

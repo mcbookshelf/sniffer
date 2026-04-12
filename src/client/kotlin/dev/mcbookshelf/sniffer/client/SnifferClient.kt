@@ -8,10 +8,16 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import dev.mcbookshelf.sniffer.Sniffer
+import dev.mcbookshelf.sniffer.client.auth.AuthPromptScreen
+import dev.mcbookshelf.sniffer.client.state.ClientConnectionState
+import dev.mcbookshelf.sniffer.client.state.ClientDebuggingState
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
 import dev.mcbookshelf.sniffer.input.StepInInput
+import dev.mcbookshelf.sniffer.network.AuthPromptPayload
+import dev.mcbookshelf.sniffer.network.SetDapConnectedPayload
 import dev.mcbookshelf.sniffer.network.SetDebugModePayload
+import dev.mcbookshelf.sniffer.network.SetDebuggingPayload
 import dev.mcbookshelf.sniffer.state.DebugToggles
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
@@ -35,8 +41,20 @@ class SnifferClient : ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(SetDebugModePayload.TYPE) { payload, _ ->
             DebugToggles.debugMode = payload.enabled
         }
+        ClientPlayNetworking.registerGlobalReceiver(SetDapConnectedPayload.TYPE) { payload, _ ->
+            ClientConnectionState.connected = payload.connected
+        }
+        ClientPlayNetworking.registerGlobalReceiver(SetDebuggingPayload.TYPE) { payload, _ ->
+            ClientDebuggingState.debugging = payload.debugging
+        }
+        ClientPlayNetworking.registerGlobalReceiver(AuthPromptPayload.TYPE) { payload, _ ->
+            val mc = Minecraft.getInstance()
+            mc.execute { mc.setScreen(AuthPromptScreen(payload.requestId, payload.clientDescription, payload.timeoutSeconds)) }
+        }
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
             DebugToggles.debugMode = false
+            ClientConnectionState.connected = false
+            ClientDebuggingState.debugging = false
         }
 
         val stepInto = KeyMappingHelper.registerKeyMapping(KeyMapping(
