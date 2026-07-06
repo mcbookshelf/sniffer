@@ -29,7 +29,12 @@ object BreakpointManager {
         val breakpoints: MutableMap<Int, Breakpoint> = HashMap()
     }
 
-    private val breakpoints: MutableMap<String, FunctionBreakpoints> = HashMap()
+    /** Primary index: normalized filesystem path → breakpoints. */
+    private val byFilePath: MutableMap<String, FunctionBreakpoints> = HashMap()
+
+    /** Secondary index: `namespace:path` function location → breakpoints. */
+    private val byMcPath: MutableMap<String, FunctionBreakpoints> = HashMap()
+
     private var nextId: Int = 0
 
     private val scopeManager: ScopeManager get() = ScopeManager.get()
@@ -87,7 +92,8 @@ object BreakpointManager {
 
         val mcpath = fileToMcPath(normalized)
         if (mcpath != null) {
-            val funBps = breakpoints.getOrPut(normalized) { FunctionBreakpoints(mcpath, normalized) }
+            val funBps = byFilePath.getOrPut(normalized) { FunctionBreakpoints(mcpath, normalized) }
+            byMcPath[mcpath] = funBps
             val id = nextId++
             funBps.breakpoints[line] = Breakpoint(id, line)
             return Optional.of(id)
@@ -104,35 +110,32 @@ object BreakpointManager {
             LOGGER.warn("Attempted to clear breakpoints with null file path")
             return
         }
-        breakpoints.remove(normalizePath(filePath))
+        val removed = byFilePath.remove(normalizePath(filePath))
+        if (removed != null) {
+            byMcPath.remove(removed.functionMcPath)
+        }
         LOGGER.debug("Cleared all breakpoints for {}", filePath)
     }
 
-    /** Whether a breakpoint is set at [mcpath]:[line]. */
+    /** Whether a breakpoint is set at [mcpath]:[line]. Hot path: no I/O. */
     @JvmStatic
     fun contains(mcpath: String?, line: Int): Boolean {
-        if (mcpath == null) return false
-        val resolved = FunctionPathRegistry.getPath(mcpath)
-        if (resolved.isEmpty) return false
-        val key = normalizePath(resolved.get())
-        return breakpoints[key]?.breakpoints?.containsKey(line) ?: false
+        if (mcpath == null || byMcPath.isEmpty()) return false
+        return byMcPath[mcpath]?.breakpoints?.containsKey(line) ?: false
     }
 
     /** The unique ID of the breakpoint at [mcpath]:[line], or empty. */
     @JvmStatic
     fun getBreakpointId(mcpath: String?, line: Int): Optional<Int> {
         if (mcpath == null) return Optional.empty()
-        return FunctionPathRegistry.getPath(mcpath)
-            .map(::normalizePath)
-            .map(breakpoints::get)
-            .flatMap { bps -> Optional.ofNullable(bps?.breakpoints?.get(line)) }
-            .map { it.id }
+        return Optional.ofNullable(byMcPath[mcpath]?.breakpoints?.get(line)).map { it.id }
     }
 
     /** Removes all breakpoints and resets the ID counter. */
     @JvmStatic
     fun clear() {
-        breakpoints.clear()
+        byFilePath.clear()
+        byMcPath.clear()
         nextId = 0
     }
 
