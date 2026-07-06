@@ -13,10 +13,12 @@ import dev.mcbookshelf.sniffer.state.DebugEventBus
 import dev.mcbookshelf.sniffer.state.ServerReference
 import org.eclipse.lsp4j.debug.*
 import org.eclipse.lsp4j.debug.Thread
+import dev.mcbookshelf.sniffer.state.SteppingState
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
 
 /**
  * A DAP (Debug Adapter Protocol) server implementation using LSP4J.
@@ -45,6 +47,14 @@ class DapServer : IDebugProtocolServer {
     }
 
     private var client: IDebugProtocolClient? = null
+
+    /**
+     * DAP `sourceReference` per ZIP-packed function, so each source gets a
+     * distinct reference (clients cache source content by reference).
+     * Only touched from the server thread (see [onServerThread]).
+     */
+    private val zipSourceReferences = HashMap<String, Int>()
+    private var nextZipSourceReference = 1
 
     init {
         DebugEventBus.onStop(::onStop)
@@ -86,7 +96,9 @@ class DapServer : IDebugProtocolServer {
     override fun disconnect(args: DisconnectArguments): CompletableFuture<Void> {
         LOGGER.debug("Disconnect request received with arguments: {}", args)
         sendMessageToAllPlayers(DISCONNECTED_MESSAGE)
-        dispatchAction(ContinueInput, "disconnect")
+        if (SteppingState.isDebugging) {
+            dispatchAction(ContinueInput, "disconnect")
+        }
         return CompletableFuture.completedFuture(null)
     }
 
@@ -107,33 +119,35 @@ class DapServer : IDebugProtocolServer {
 
         val lines = args.breakpoints.map { it.line - 1 }
 
-        val output = dispatch(SetBreakpointsInput(args.source.path, lines)) as SetBreakpointsOutput
+        return onServerThread {
+            val output = dispatch(SetBreakpointsInput(args.source.path, lines)) as SetBreakpointsOutput
 
-        val dapBreakpoints = output.results.map { result ->
-            Breakpoint().apply {
-                line = result.line + 1
-                isVerified = result.verified
-                if (result.id != null) {
-                    id = result.id
-                } else {
-                    reason = BreakpointNotVerifiedReason.FAILED
+            val dapBreakpoints = output.results.map { result ->
+                Breakpoint().apply {
+                    line = result.line + 1
+                    isVerified = result.verified
+                    if (result.id != null) {
+                        id = result.id
+                    } else {
+                        reason = BreakpointNotVerifiedReason.FAILED
+                    }
                 }
             }
-        }
 
-        return CompletableFuture.completedFuture(SetBreakpointsResponse().apply {
-            breakpoints = dapBreakpoints.toTypedArray()
-        })
+            SetBreakpointsResponse().apply {
+                breakpoints = dapBreakpoints.toTypedArray()
+            }
+        }
     }
 
     override fun setInstructionBreakpoints(args: SetInstructionBreakpointsArguments): CompletableFuture<SetInstructionBreakpointsResponse> {
         LOGGER.debug("SetInstructionBreakpoints request received with arguments: {}", args)
-        return CompletableFuture.completedFuture(null)
+        return CompletableFuture.completedFuture(SetInstructionBreakpointsResponse())
     }
 
     override fun setExceptionBreakpoints(args: SetExceptionBreakpointsArguments): CompletableFuture<SetExceptionBreakpointsResponse> {
         LOGGER.debug("SetExceptionBreakpoints request received with arguments: {}", args)
-        return CompletableFuture.completedFuture(null)
+        return CompletableFuture.completedFuture(SetExceptionBreakpointsResponse())
     }
 
     // ===== Execution Control Methods =====
@@ -188,59 +202,65 @@ class DapServer : IDebugProtocolServer {
         val startFrame = args.startFrame ?: DEFAULT_START_FRAME
         val maxLevels = args.levels ?: DEFAULT_MAX_LEVELS
 
-        val output = dispatch(GetStackTraceInput(startFrame, maxLevels)) as StackTraceOutput
+        return onServerThread {
+            val output = dispatch(GetStackTraceInput(startFrame, maxLevels)) as StackTraceOutput
 
-        val frames = output.frames.map { data ->
-            StackFrame().apply {
-                id = data.id
-                name = data.functionName
-                line = data.line + 1
-                source = toSource(data.functionName, data.path)
+            val frames = output.frames.map { data ->
+                StackFrame().apply {
+                    id = data.id
+                    name = data.functionName
+                    line = data.line + 1
+                    source = toSource(data.functionName, data.path)
+                }
+            }
+
+            StackTraceResponse().apply {
+                stackFrames = frames.toTypedArray()
+                totalFrames = output.totalFrames
             }
         }
-
-        return CompletableFuture.completedFuture(StackTraceResponse().apply {
-            stackFrames = frames.toTypedArray()
-            totalFrames = output.totalFrames
-        })
     }
 
     override fun source(args: SourceArguments): CompletableFuture<SourceResponse> {
         LOGGER.debug("Source request received with arguments: {}", args)
 
-        val output = dispatch(GetSourceInput(args.source.name)) as SourceOutput
+        return onServerThread {
+            val output = dispatch(GetSourceInput(args.source.name)) as SourceOutput
 
-        return CompletableFuture.completedFuture(SourceResponse().apply {
-            content = output.content
-            mimeType = output.mimeType
-        })
+            SourceResponse().apply {
+                content = output.content
+                mimeType = output.mimeType
+            }
+        }
     }
 
     override fun scopes(args: ScopesArguments): CompletableFuture<ScopesResponse> {
         LOGGER.debug("Scopes request received with arguments: {}", args)
 
-        val output = dispatch(GetScopesInput(args.frameId)) as ScopesOutput
+        return onServerThread {
+            val output = dispatch(GetScopesInput(args.frameId)) as ScopesOutput
 
-        val dapScopes = output.scopes.map { data ->
-            Scope().apply {
-                name = data.name
-                line = 0
-                presentationHint = "locals"
-                namedVariables = data.variableCount
-                variablesReference = data.id
-                source = toSource(data.functionName, data.path)
+            val dapScopes = output.scopes.map { data ->
+                Scope().apply {
+                    name = data.name
+                    line = 0
+                    presentationHint = "locals"
+                    namedVariables = data.variableCount
+                    variablesReference = data.id
+                    source = toSource(data.functionName, data.path)
+                }
+            }
+
+            ScopesResponse().apply {
+                scopes = dapScopes.toTypedArray()
             }
         }
-
-        return CompletableFuture.completedFuture(ScopesResponse().apply {
-            scopes = dapScopes.toTypedArray()
-        })
     }
 
     override fun variables(args: VariablesArguments): CompletableFuture<VariablesResponse> {
         LOGGER.debug("Variables request received with arguments: {}", args)
 
-        return CompletableFuture.supplyAsync {
+        return onServerThread {
             val output = dispatch(
                 ResolveVariablesInput(args.variablesReference, args.start, args.count)
             ) as ResolveVariablesOutput
@@ -256,7 +276,7 @@ class DapServer : IDebugProtocolServer {
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
         LOGGER.debug("Evaluate request received with arguments: {}", args)
 
-        return CompletableFuture.supplyAsync {
+        return onServerThread {
             val output = dispatch(EvaluateInput(args.expression)) as EvaluateOutput
 
             EvaluateResponse().apply {
@@ -326,6 +346,19 @@ class DapServer : IDebugProtocolServer {
 
     // ===== Dispatch & Translation Helpers =====
 
+    /**
+     * Runs [block] on the Minecraft server thread and completes the returned future with its result.
+     * Everything that reads live game state (scopes, variables, entity NBT, scoreboard, breakpoint indices) must go through here.
+     * DAP requests arrive on WebSocket/LSP4J threads, and the world keeps ticking while the debugger is paused.
+     */
+    private fun <T> onServerThread(block: () -> T): CompletableFuture<T> {
+        val server = runCatching { ServerReference.get() }.getOrNull()
+            ?: return CompletableFuture.failedFuture(IllegalStateException("Minecraft server not available"))
+        // MinecraftServer is an Executor that runs submitted tasks on the
+        // server thread (or inline if already on it).
+        return CompletableFuture.supplyAsync(Supplier { block() }, server)
+    }
+
     private fun dispatch(input: IInput): Output {
         val source = ServerReference.getCommandSource()
         return SnifferDispatcher.get().dispatch(input, Context(source, ServerReference.get()))
@@ -347,7 +380,9 @@ class DapServer : IDebugProtocolServer {
             when (path.kind) {
                 RealPath.Kind.DIRECTORY -> source.path = path.path
                 RealPath.Kind.ZIP -> {
-                    source.sourceReference = 1
+                    // Clients cache source content by reference, so each
+                    // zipped function needs its own stable reference.
+                    source.sourceReference = zipSourceReferences.getOrPut(functionName) { nextZipSourceReference++ }
                     source.path = path.path
                 }
             }
