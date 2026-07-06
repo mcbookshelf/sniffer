@@ -26,6 +26,10 @@ public class FrameMixin implements FrameUniqueAccessor {
     @Unique
     private InstantiatedFunction<?> function = null;
 
+    /** Whether this frame's debug scope has already been popped. */
+    @Unique
+    private boolean scopePopped = false;
+
     @Override
     public InstantiatedFunction<?> getFunction() {
         return function;
@@ -37,6 +41,21 @@ public class FrameMixin implements FrameUniqueAccessor {
     }
 
     /**
+     * Pops the debug scope pushed for this frame, at most once.
+     *
+     * <p>Only frames created by {@code CallFunction} carry a {@code function} reference and had a scope pushed for them;
+     * other frames (e.g. the depth-0 frame of a top-level {@code /return run}) must not pop:
+     * doing so would corrupt the scope stack of a concurrently paused session.
+     * Vanilla can also discard the same frame more than once ({@code /return run function} plus its fallthrough), hence the {@code scopePopped} guard.
+     */
+    @Override
+    public void popScopeOnce() {
+        if (function == null || scopePopped) return;
+        scopePopped = true;
+        ScopeManager.Companion.get().unscope();
+    }
+
+    /**
      * Pops the debug scope when the frame is discarded.
      * Handles the {@code /return} case — when a function returns early,
      * {@code frame.discard()} removes remaining queue entries (including the
@@ -44,6 +63,6 @@ public class FrameMixin implements FrameUniqueAccessor {
      */
     @Inject(method = "discard", at = @At("HEAD"))
     private void beforeDiscard(CallbackInfo ci) {
-        ScopeManager.Companion.get().unscope();
+        popScopeOnce();
     }
 }
