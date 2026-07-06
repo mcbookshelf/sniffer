@@ -5,6 +5,7 @@
   "mixins": [
     "UnboundDebugMixin",
     "FunctionParsingMixin",
+    "CommandFunctionMixin",
     "CallFunctionMixin",
     "FrameMixin",
     "InitialFunctionCallMixin",

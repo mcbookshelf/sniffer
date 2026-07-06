@@ -71,7 +71,8 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
         // 3. Queue cleanup entry — pops scope on normal function completion.
         //    If /return calls frame.discard(), this entry is removed (same depth),
         //    and FrameMixin.beforeDiscard() handles the scope pop instead.
-        context.queueNext(new CommandQueueEntry<>(newFrame, (s, c) -> ScopeManager.Companion.get().unscope()));
+        //    popScopeOnce() keeps the two paths mutually exclusive even when vanilla discards the same frame twice.
+        context.queueNext(new CommandQueueEntry<>(newFrame, (s, c) -> FrameUniqueAccessor.of(newFrame).popScopeOnce()));
     }
 
     @Unique
