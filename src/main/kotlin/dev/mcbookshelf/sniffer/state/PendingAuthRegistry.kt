@@ -37,6 +37,14 @@ object PendingAuthRegistry {
     private val bySession = HashMap<Session, PendingAuth>()
     private val lock = Any()
 
+    /**
+     * After a player rejects a prompt (or it times out), further prompts for
+     * that player are auto-rejected for this many milliseconds so a remote
+     * client can't spam the modal.
+     */
+    private const val REJECTION_COOLDOWN_MS = 10_000L
+    private val rejectionCooldownUntil = ConcurrentHashMap<UUID, Long>()
+
     private val scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { runnable ->
         Thread(runnable, "sniffer-auth-timeout").apply { isDaemon = true }
     }
@@ -45,8 +53,18 @@ object PendingAuthRegistry {
      * Register a new pending auth, superseding any prior pending request for
      * the same player. The previous request (if any) is cancelled and its
      * session closed with a policy-violation reason.
+     *
+     * Requests arriving during the player's rejection cooldown are refused
+     * outright without prompting.
      */
     fun register(pending: PendingAuth, timeoutSeconds: Int) {
+        val cooldownUntil = rejectionCooldownUntil[pending.playerUuid] ?: 0L
+        if (System.currentTimeMillis() < cooldownUntil) {
+            logger.info("Auth request for player {} refused: rejection cooldown active", pending.playerUuid)
+            try { pending.onRejected() } catch (e: Exception) { logger.error("onRejected failed", e) }
+            closeSession(pending.session, "auth recently rejected, retry later")
+            return
+        }
         val superseded = synchronized(lock) {
             val prior = byPlayer.remove(pending.playerUuid)
             prior?.let { bySession.remove(it.session) }
@@ -71,6 +89,7 @@ object PendingAuthRegistry {
             }
             if (timedOut != null) {
                 logger.info("Auth prompt timed out for player {}", pending.playerUuid)
+                startCooldown(pending.playerUuid)
                 try { pending.onRejected() } catch (e: Exception) { logger.error("onRejected failed", e) }
                 notifyPlayerTimedOut(pending.playerUuid)
                 closeSession(pending.session, "auth prompt timed out")
@@ -94,9 +113,14 @@ object PendingAuthRegistry {
         if (accepted) {
             try { pending.onApproved() } catch (e: Exception) { logger.error("onApproved failed", e) }
         } else {
+            startCooldown(playerUuid)
             try { pending.onRejected() } catch (e: Exception) { logger.error("onRejected failed", e) }
             closeSession(pending.session, "auth rejected by player")
         }
+    }
+
+    private fun startCooldown(playerUuid: UUID) {
+        rejectionCooldownUntil[playerUuid] = System.currentTimeMillis() + REJECTION_COOLDOWN_MS
     }
 
     /**
@@ -116,6 +140,7 @@ object PendingAuthRegistry {
 
     /** Server stop: drop everything. */
     fun clearAll() {
+        rejectionCooldownUntil.clear()
         val all = synchronized(lock) {
             val snapshot = byPlayer.values.toList()
             byPlayer.clear()
