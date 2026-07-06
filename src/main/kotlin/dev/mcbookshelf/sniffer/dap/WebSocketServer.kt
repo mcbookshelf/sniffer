@@ -37,6 +37,9 @@ class WebSocketServer : Endpoint() {
         private val logger = LoggerFactory.getLogger("sniffer")
         private var server: Server? = null
 
+        /** Cap on messages buffered per session (mainly pre-auth, where nothing drains the queue). */
+        private const val MAX_QUEUED_MESSAGES = 1024
+
         /**
          * Launches the WebSocket server using the configured port.
          *
@@ -73,6 +76,7 @@ class WebSocketServer : Endpoint() {
                 val s = Server(host, currentPort, "/", null, WebSocketConfigurator::class.java)
                 try {
                     s.start()
+                    server = s
                     logger.info("Jakarta WebSocket DAP server is running on ws://{}:{}/{}", host, currentPort, "")
                     return Optional.of(s)
                 } catch (e: Exception) {
@@ -109,7 +113,10 @@ class WebSocketServer : Endpoint() {
 
     private var dapServer: DapServer? = null
     private var launcher: Launcher<IDebugProtocolClient>? = null
-    private val messageQueue = LinkedBlockingQueue<ByteArray>()
+
+    // Bounded so an unauthenticated client cannot grow the heap while the in-game approval prompt is pending.
+    // Legitimate DAP clients only send a handful of small requests before the session is approved.
+    private val messageQueue = LinkedBlockingQueue<ByteArray>(MAX_QUEUED_MESSAGES)
     private var currentSession: Session? = null
 
     override fun onOpen(session: Session, config: EndpointConfig) {
@@ -121,15 +128,21 @@ class WebSocketServer : Endpoint() {
         session.maxTextMessageBufferSize = 65536
         session.maxBinaryMessageBufferSize = 65536
 
+        // The mod supports a single DAP session: a second client would overwrite the event-bus listeners and reset the first one's state.
+        if (ConnectionState.isConnected()) {
+            reject(session, "another debugger is already attached")
+            return
+        }
+
         session.addMessageHandler(object : MessageHandler.Whole<String> {
             override fun onMessage(message: String) {
-                messageQueue.offer(message.toByteArray())
+                enqueue(session, message.toByteArray())
             }
         })
 
         session.addMessageHandler(object : MessageHandler.Whole<ByteArray> {
             override fun onMessage(message: ByteArray) {
-                messageQueue.offer(message)
+                enqueue(session, message)
             }
         })
 
@@ -140,24 +153,31 @@ class WebSocketServer : Endpoint() {
         }
 
         val username = session.requestParameterMap["user"]?.firstOrNull()?.takeIf { it.isNotBlank() }
-        val server = ServerReference.get()
+        val server = runCatching { ServerReference.get() }.getOrNull()
+        if (server == null) {
+            reject(session, "Minecraft server not available")
+            return
+        }
 
-        // Singleplayer: the user param is optional — default to the host player.
+        // Singleplayer: the user param is optional (and, if present, may name the host).
+        // Default to the host player, who needs no op entry.
         // Multiplayer: the user param is mandatory so we know which player to prompt.
-        if (server.isSingleplayer && username == null) {
+        if (server.isSingleplayer) {
             val host = server.singleplayerProfile
             if (host == null) {
                 reject(session, "cannot determine singleplayer host")
                 return
             }
-            server.execute {
-                val player = server.playerList.getPlayer(host.id) ?: run {
-                    reject(session, "host player not online")
-                    return@execute
+            if (username == null || username.equals(host.name, ignoreCase = true)) {
+                server.execute {
+                    val player = server.playerList.getPlayer(host.id) ?: run {
+                        reject(session, "host player not online")
+                        return@execute
+                    }
+                    promptPlayer(session, player, cfg)
                 }
-                promptPlayer(session, player, cfg)
+                return
             }
-            return
         }
 
         if (username == null) {
@@ -176,6 +196,12 @@ class WebSocketServer : Endpoint() {
                 return@execute
             }
             promptPlayer(session, player, cfg)
+        }
+    }
+
+    private fun enqueue(session: Session, message: ByteArray) {
+        if (!messageQueue.offer(message)) {
+            reject(session, "message backlog exceeded before session was approved")
         }
     }
 
@@ -220,8 +246,12 @@ class WebSocketServer : Endpoint() {
     override fun onClose(session: Session, closeReason: CloseReason) {
         logger.info("WebSocket closed: {}", closeReason)
         PendingAuthRegistry.cancel(session)
-        val server = ServerReference.get()
-        SnifferDispatcher.get().dispatch(ContinueInput, Context(server.createCommandSourceStack(), server))
+        // The server may already be gone if the close is part of shutdown.
+        runCatching { ServerReference.get() }.getOrNull()?.let { server ->
+            if (SteppingState.isDebugging) {
+                SnifferDispatcher.get().dispatch(ContinueInput, Context(server.createCommandSourceStack(), server))
+            }
+        }
         SteppingState.resetAll()
         cleanup()
     }
