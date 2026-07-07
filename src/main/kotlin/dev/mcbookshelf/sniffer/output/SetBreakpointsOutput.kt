@@ -16,10 +16,12 @@ data class SetBreakpointsOutput(val results: List<BreakpointResult>) : Output
  * @property line zero indexed line the breakpoint was requested on
  * @property id unique id of the breakpoint, `null` when it could not be set
  * @property verified whether the line was mapped to a function
+ * @property message why the breakpoint could not be verified, `null` when it was
  * @author theogiraudet
  */
 data class BreakpointResult(
     val line: Int,
     val id: Int?,
     val verified: Boolean,
+    val message: String? = null,
 )

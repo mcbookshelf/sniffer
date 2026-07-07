@@ -62,6 +62,9 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
     /** Fires for every function line and suspends the execution when a breakpoint or a step boundary is reached. */
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     private void onExecute(ExecutionCommandSource<?> sender, ExecutionContext<?> context, Frame frame, CallbackInfo ci) {
+        // Lines run by a breakpoint condition are not part of the debugged execution and must not be checked.
+        if (BreakpointManager.INSTANCE.evaluatingCondition) return;
+
         if (frame.depth() <= 0) return;
         if (sourceFunction == null) return;
         if (sourceLine < 0) return;
@@ -82,7 +85,9 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
         String stopReason = null;
 
         // Must run before the scope line is updated, since mustStop compares against it to avoid triggering twice.
-        if (BreakpointManager.INSTANCE.mustStop(sourceFunction, sourceLine)) {
+        // The sender is passed along so a conditional breakpoint runs its command with the executing command source.
+        CommandSourceStack conditionSource = sender instanceof CommandSourceStack senderCss ? senderCss : null;
+        if (BreakpointManager.INSTANCE.mustStop(sourceFunction, sourceLine, conditionSource)) {
             stopReason = BreakpointTrigger.BREAKPOINT_REASON;
         }
 

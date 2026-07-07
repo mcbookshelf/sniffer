@@ -118,6 +118,61 @@ class BreakpointCommandIntegrationGameTest : AbstractDapIntegrationGameTest() {
             .thenSucceed()
     }
 
+    @GameTest(environment = "sniffer_test:cmd_conditional_trigger", maxTicks = MAX_TICKS)
+    fun aTriggerWithAConditionOnlyHaltsWhenItsCommandSucceeds(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        // The test world outlives the run, so the flag the condition reads has to start from a known state.
+        session.run("data remove storage $COND_STORAGE flag")
+
+        helper.startSequence()
+            // The argument of `breakpoint` is a command read on its success channel, exactly like a DAP breakpoint condition.
+            .thenExecute { session.run("function $CONDITIONAL_TRIGGER") }
+            .thenWaitUntil { assertThat(session).hasExecuted("before_trigger", "after_trigger") }
+            .thenExecute {
+                assertThat(session).isNotPaused("A failing condition should let the line through")
+                session.clearLog()
+                // Flipping the flag is all that changes, so the halt below can only come from the condition now succeeding.
+                session.run("data modify storage $COND_STORAGE flag set value 1b")
+            }
+            .thenExecute { session.run("function $CONDITIONAL_TRIGGER") }
+            .thenWaitUntil { assertThat(session).isPaused("A succeeding condition should halt execution") }
+            .thenExecute { assertThat(session).hasExecuted("before_trigger") }
+            .thenExecute { session.run("breakpoint continue") }
+            .thenWaitUntil { assertThat(session).hasExecuted("before_trigger", "after_trigger") }
+            .thenSucceed()
+    }
+
+    @GameTest(environment = "sniffer_test:cmd_invalid_condition", maxTicks = MAX_TICKS)
+    fun aTriggerWhoseConditionIsNotACommandSaysSoAndDoesNotHalt(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+
+        // Nothing validated this one ahead of time, so the only place the typo can be reported is here.
+        val feedback = session.runCapturing("breakpoint not_a_command")
+
+        assertTrue(feedback.isNotEmpty(), "An unparseable condition should be reported")
+        assertThat(session).isNotPaused("An unparseable condition should not halt execution")
+        helper.succeed()
+    }
+
+    @GameTest(environment = "sniffer_test:cmd_condition_suggestions", maxTicks = MAX_TICKS)
+    fun theConditionIsCompletedAsACommandWouldBe(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val dispatcher = session.server.commands.dispatcher
+        val source = session.server.createCommandSourceStack()
+
+        val partial = "breakpoint exec"
+        val suggestions = dispatcher.getCompletionSuggestions(dispatcher.parse(partial, source)).join()
+        assertTrue(suggestions.list.any { it.text == "execute" }, "The condition should be completed from the command tree")
+        // Only the half typed command word may be replaced, or accepting a suggestion would eat the `/breakpoint` in front of it.
+        assertEquals(suggestions.range.start, partial.indexOf("exec"), "suggestion start")
+
+        // Completion follows the command into its own arguments, which is the whole point of borrowing the real tree.
+        val nested = "breakpoint execute if "
+        val nestedSuggestions = dispatcher.getCompletionSuggestions(dispatcher.parse(nested, source)).join()
+        assertTrue(nestedSuggestions.list.any { it.text == "score" }, "The condition's own arguments should be completed too")
+        helper.succeed()
+    }
+
     @GameTest(environment = "sniffer_test:cmd_continue", maxTicks = MAX_TICKS)
     fun continueInGameResumesTheAttachedDapClient(helper: GameTestHelper) {
         val session = DebugSession(helper)
@@ -266,6 +321,10 @@ class BreakpointCommandIntegrationGameTest : AbstractDapIntegrationGameTest() {
         const val OUTER = "sniffer_test:outer"
         const val INNER = "sniffer_test:inner"
         const val TRIGGERS = "sniffer_test:triggers_breakpoint"
+        const val CONDITIONAL_TRIGGER = "sniffer_test:conditional_trigger"
+
+        /** Storage the conditional trigger reads, kept apart from the log the fixtures write their markers into. */
+        const val COND_STORAGE = "sniffer_test:cmd_cond"
         const val MACRO = "sniffer_test:macro"
 
         const val RAN_AS = "sniffer_ran_as_executor"
