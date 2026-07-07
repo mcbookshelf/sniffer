@@ -19,6 +19,7 @@ import dev.mcbookshelf.sniffer.input.StepOverInput
 import dev.mcbookshelf.sniffer.input.TriggerBreakpointInput
 import dev.mcbookshelf.sniffer.output.AllVariablesOutput
 import dev.mcbookshelf.sniffer.output.StackOutput
+import dev.mcbookshelf.sniffer.output.TriggerBreakpointOutput
 import dev.mcbookshelf.sniffer.output.VariableOutput
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
@@ -43,14 +44,15 @@ object BreakPointCommand {
             dispatcher.register(
                 Commands.literal("breakpoint")
                     .requires { it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER) }
-                    .executes { context ->
-                        val server = context.source.server
-                        for (player in server.playerList.players) {
-                            player.sendSystemMessage(Component.translatable("sniffer.commands.breakpoint.set"))
-                        }
-                        dispatch(TriggerBreakpointInput, context.source)
-                        1
-                    }
+                    .executes { context -> triggerBreakpoint(context.source) }
+                    .then(
+                        // The condition is a command read on its success channel, the same thing a DAP breakpoint condition is.
+                        Commands.argument("condition", StringArgumentType.greedyString())
+                            .suggests(ConditionSuggestionProvider)
+                            .executes { context ->
+                                triggerBreakpoint(context.source, StringArgumentType.getString(context, "condition"))
+                            }
+                    )
                     .then(
                         Commands.literal("step")
                             .executes { dispatch(StepInInput(1), it.source); 1 }
@@ -132,6 +134,25 @@ object BreakPointCommand {
                     )
             )
         }
+    }
+
+    /**
+     * Dispatches [TriggerBreakpointInput] and announces the halt to every player, if there was one.
+     *
+     * A condition that simply failed says nothing, so `#!breakpoint <command>` in a hot function does not spam.
+     * One that could not be run at all is reported to the caller, since nothing validated it beforehand.
+     */
+    private fun triggerBreakpoint(source: CommandSourceStack, condition: String? = null): Int {
+        val output = dispatch(TriggerBreakpointInput(condition), source) as TriggerBreakpointOutput
+        if (output.error != null) {
+            source.sendFailure(Component.translatable("sniffer.commands.breakpoint.condition.error", output.error))
+            return 0
+        }
+        if (!output.triggered) return 0
+        for (player in source.server.playerList.players) {
+            player.sendSystemMessage(Component.translatable("sniffer.commands.breakpoint.set"))
+        }
+        return 1
     }
 
     private fun dispatch(input: IInput, source: CommandSourceStack): Output =

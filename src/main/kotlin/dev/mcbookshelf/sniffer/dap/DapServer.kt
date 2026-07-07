@@ -66,6 +66,7 @@ class DapServer : IDebugProtocolServer {
 
         val capabilities = Capabilities().apply {
             supportsConfigurationDoneRequest = true
+            supportsConditionalBreakpoints = true
         }
 
         return CompletableFuture.completedFuture(capabilities).thenApply { c ->
@@ -113,15 +114,18 @@ class DapServer : IDebugProtocolServer {
             return CompletableFuture.completedFuture(SetBreakpointsResponse())
         }
 
-        val lines = args.breakpoints.map { it.line - 1 }
+        val specs = args.breakpoints.map { BreakpointSpec(it.line - 1, it.condition) }
 
         return onServerThread {
-            val output = dispatch(SetBreakpointsInput(args.source.path, lines)) as SetBreakpointsOutput
+            val output = dispatch(SetBreakpointsInput(args.source.path, specs)) as SetBreakpointsOutput
 
             val dapBreakpoints = output.results.map { result ->
                 Breakpoint().apply {
                     line = result.line + 1
                     isVerified = result.verified
+                    if (result.message != null) {
+                        message = result.message
+                    }
                     if (result.id != null) {
                         id = result.id
                     } else {

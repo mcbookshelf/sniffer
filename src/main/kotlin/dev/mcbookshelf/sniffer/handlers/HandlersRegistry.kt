@@ -20,7 +20,7 @@ fun buildHandlers(): List<Handler<*>> {
         ContinueHandler(),
         ResetSteppingHandler(),
         SetDebugModeHandler(),
-        TriggerBreakpointHandler(),
+        TriggerBreakpointHandler(BreakpointManager),
         GetVariableHandler(),
         GetAllVariablesHandler(),
         GetStackHandler(),

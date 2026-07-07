@@ -146,6 +146,86 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
             .thenSucceedAndClose()
     }
 
+    @GameTest(environment = "sniffer_test:dap_conditional_breakpoint", maxTicks = MAX_TICKS)
+    fun aConditionalBreakpointOnlyHaltsWhenItsCommandSucceeds(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val dap = initDapClient()
+        // The test world outlives the run, so the flag the condition reads has to start from a known state.
+        session.run("data remove storage $CONDITION_STORAGE flag")
+
+        helper.startSequence()
+            // The condition is a command, read on its success channel: it halts on success and lets the line through on failure.
+            .thenRequest("setBreakpoints", { dap.setBreakpoints(breakpointsAt(session.filePath(LINEAR), 2, condition = CONDITION)) }) { response ->
+                assertTrue(response.breakpoints.single().isVerified, "A breakpoint with a valid condition should verify")
+            }
+            .thenExecute { session.run("function $LINEAR") }
+            .thenWaitUntil { assertThat(session).hasExecuted(LINEAR_A, LINEAR_B, LINEAR_C) }
+            .thenExecute {
+                assertTrue(events.stopped.isEmpty(), "The flag is unset, so the condition fails and the function runs through")
+                assertThat(session).isNotPaused()
+                session.clearLog()
+                // Flipping the flag is all that changes, so the halt below can only come from the condition now succeeding.
+                session.run("data modify storage $CONDITION_STORAGE flag set value 1b")
+            }
+            .thenExecute { session.run("function $LINEAR") }
+            .thenAwaitEvent("stopped", events.stopped)
+            .thenExecute { assertThat(session).hasExecuted(LINEAR_A) }
+            .thenRequest("continue", { dap.continue_(ContinueArguments()) })
+            .thenWaitUntil { assertThat(session).hasExecuted(LINEAR_A, LINEAR_B, LINEAR_C) }
+            .thenSucceedAndClose()
+    }
+
+    @GameTest(environment = "sniffer_test:dap_condition_calls_function", maxTicks = MAX_TICKS)
+    fun breakpointsInsideAFunctionAConditionCallsAreNotHit(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val dap = initDapClient()
+
+        helper.startSequence()
+            // A live breakpoint on the first line of the function the condition below is about to call.
+            .thenRequest("setBreakpoints", { dap.setBreakpoints(breakpointsAt(session.filePath(PROBE), 1)) }) { response ->
+                assertTrue(response.breakpoints.single().isVerified, "The breakpoint in the called function should verify")
+            }
+            .thenRequest("setBreakpoints", { dap.setBreakpoints(breakpointsAt(session.filePath(LINEAR), 2, condition = PROBE_CONDITION)) }) { response ->
+                assertTrue(response.breakpoints.single().isVerified, "The conditional breakpoint should verify")
+            }
+            .thenExecute { session.run("function $LINEAR") }
+            .thenAwaitEvent("stopped", events.stopped)
+            .thenExecute {
+                // The condition ran the whole function rather than halting on its way through it.
+                assertTrue(session.stored(PROBE_MARKER) != null, "The condition should have run the function it calls")
+                // A condition is not part of the debugged execution, so the breakpoint it runs over must not fire:
+                // the halt just awaited is the conditional one, and the call stack says it is not the one in the called function.
+                assertTrue(events.stopped.isEmpty(), "Only the conditional breakpoint should have halted")
+                assertThat(session).hasCallStack(LINEAR)
+            }
+            .thenRequest("stackTrace", { dap.stackTrace(StackTraceArguments()) }) { response ->
+                assertEquals(response.stackFrames.map { it.name }, listOf(LINEAR), "frame names")
+                assertEquals(response.stackFrames[0].line, 2, "the line execution halted on")
+            }
+            .thenRequest("continue", { dap.continue_(ContinueArguments()) })
+            .thenWaitUntil { assertThat(session).hasExecuted(LINEAR_A, LINEAR_B, LINEAR_C, PROBE_MARKER) }
+            .thenSucceedAndClose()
+    }
+
+    @GameTest(environment = "sniffer_test:dap_invalid_condition", maxTicks = MAX_TICKS)
+    fun aBreakpointWhoseConditionIsNotACommandIsReportedUnverified(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val dap = initDapClient()
+
+        helper.startSequence()
+            // Conditions are validated when they are set, so a typo comes back as an unverified breakpoint rather than as a surprise at runtime.
+            .thenRequest("setBreakpoints", { dap.setBreakpoints(breakpointsAt(session.filePath(LINEAR), 2, condition = "not_a_command")) }) { response ->
+                val breakpoint = response.breakpoints.single()
+                assertFalse(breakpoint.isVerified, "A breakpoint with an unparseable condition cannot verify")
+                assertTrue(breakpoint.message != null, "The client should be told why the breakpoint did not verify")
+            }
+            .thenExecute { session.run("function $LINEAR") }
+            .thenWaitUntil { assertThat(session).hasExecuted(LINEAR_A, LINEAR_B, LINEAR_C) }
+            // The breakpoint was never registered, so nothing halts.
+            .thenExecute { assertTrue(events.stopped.isEmpty(), "An unverified breakpoint must not halt execution") }
+            .thenSucceedAndClose()
+    }
+
     @GameTest(environment = "sniffer_test:dap_breakpoint_replace", maxTicks = MAX_TICKS)
     fun resendingAFilesBreakpointsReplacesTheOnesItHeld(helper: GameTestHelper) {
         val session = DebugSession(helper)
@@ -793,9 +873,14 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
             customName = Component.literal(name)
         }
 
-    private fun breakpointsAt(path: String, vararg lines: Int) = SetBreakpointsArguments().apply {
+    private fun breakpointsAt(path: String, vararg lines: Int, condition: String? = null) = SetBreakpointsArguments().apply {
         source = Source().apply { this.path = path }
-        breakpoints = lines.map { line -> SourceBreakpoint().apply { this.line = line } }.toTypedArray()
+        breakpoints = lines.map { line ->
+            SourceBreakpoint().apply {
+                this.line = line
+                this.condition = condition
+            }
+        }.toTypedArray()
     }
 
     private fun sourceOf(function: String) = SourceArguments().apply {
@@ -985,6 +1070,18 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
         const val NESTED_FIRST = "nested_first"
         const val NESTED_SECOND = "nested_second"
         const val NESTED_THIRD = "nested_third"
+        const val LINEAR_A = "a"
+        const val LINEAR_B = "b"
+        const val LINEAR_C = "c"
+
+        /** A function called from a breakpoint condition, returning a nonzero result so the condition reads as a success. */
+        const val PROBE = "sniffer_test:probe"
+        const val PROBE_MARKER = "probe"
+        const val PROBE_CONDITION = "function $PROBE"
+
+        /** Storage the conditional breakpoint test flips, kept apart from the log the fixtures write their markers into. */
+        const val CONDITION_STORAGE = "sniffer_test:cond"
+        const val CONDITION = "execute if data storage $CONDITION_STORAGE {flag:1b}"
 
         /** A frame or variables id the adapter never handed out, which a client can still ask about after a stale stack. */
         const val UNKNOWN_REFERENCE = 9999
