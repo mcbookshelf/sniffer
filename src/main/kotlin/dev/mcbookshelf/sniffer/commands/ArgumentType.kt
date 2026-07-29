@@ -144,9 +144,13 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
 
     fun parseArgument(reader: StringReader): DebugData {
         reader.expect('(')
-        reader.skipWhitespace()
-        val parsedData = parseArgumentWithoutBrackets(reader)
-        reader.skipWhitespace()
+        val argumentReader = StringReader(reader.readUntil(')'))
+        argumentReader.skipWhitespace()
+        val parsedData = parseArgumentWithoutBrackets(argumentReader)
+        argumentReader.skipWhitespace()
+        if(argumentReader.canRead()){
+            throw INVALID_ARG_ERROR.createWithContext(argumentReader)
+        }
         reader.expect(')')
         return parsedData
     }
@@ -363,6 +367,7 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         }
 
         private val EMPTY_EXPR_ERROR = SimpleCommandExceptionType { "Empty expression" }
+        private val INVALID_ARG_ERROR = SimpleCommandExceptionType { "Invalid expression argument" }
         private val MISSING_OP_ERROR = SimpleCommandExceptionType { "Missing operation between arguments" }
         private val MISSING_ARG_ERROR = SimpleCommandExceptionType { "Missing arguments after operation" }
         private val OPERATION_TYPE_ERROR = Dynamic3CommandExceptionType { operation, left, right -> Message { "Operation $operation is not applicable to $left and $right" }}
