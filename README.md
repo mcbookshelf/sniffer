@@ -79,7 +79,7 @@ The debugger can be controlled directly from Minecraft using the following comma
 
 * Continue
 
-When the game is "frozen", you can use the command `/breakpoint move` to unfreeze the game and continue running.
+When the game is "frozen", you can use the command `/breakpoint continue` to unfreeze the game and continue running.
 
 * Get Macro Arguments
 

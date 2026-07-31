@@ -10,7 +10,7 @@
   "sniffer.commands.breakpoint.get.fail.error": "获取参数的值: %s 时发生了意外错误",
   "sniffer.commands.breakpoint.get.fail.not_macro": "此函数不是宏",
   "sniffer.commands.breakpoint.move": "游戏已继续",
-  "sniffer.commands.breakpoint.move.not_debugging": "`move` 命令只能在断点时使用",
+  "sniffer.commands.breakpoint.move.not_debugging": "`continue` 命令只能在断点时使用",
   "sniffer.commands.breakpoint.set": "断点已触发",
   "sniffer.commands.breakpoint.step.fail": "`step` 命令只能在断点时使用",
   "sniffer.commands.jvmtimer.disable": "计时器 %s 已禁用",
