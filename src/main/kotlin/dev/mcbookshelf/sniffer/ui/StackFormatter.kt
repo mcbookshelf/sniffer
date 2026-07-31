@@ -45,14 +45,15 @@ object StackFormatter {
         boldTop: Boolean,
         highlightColor: Int = color,
     ): MutableComponent {
-        var text: MutableComponent = Component.empty()
+        var text: MutableComponent = Component.literal("\nCall stack:\n").withColor(color)
         val stacks = ScopeManager.get().debugScopes
         for ((count, stack) in stacks.withIndex()) {
             if (count >= maxStack) {
                 text.append(Component.literal("... (${stacks.size - count} more)").withColor(color))
                 break
             }
-            val t = Component.literal(stack.function)
+            val lineStr = if (stack.line >= 0) ":${stack.line + 1}" else ""
+            val t = Component.literal("${stack.function}$lineStr")
             val isTop = stacks.indexOf(stack) == 0
             t.style = t.style
                 .withBold(boldTop && isTop)
