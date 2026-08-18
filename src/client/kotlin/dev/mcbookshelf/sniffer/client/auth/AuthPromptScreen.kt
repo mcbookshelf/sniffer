@@ -69,7 +69,7 @@ class AuthPromptScreen(
         val remaining = remainingSeconds()
         rejectButton?.message = Component.translatable("sniffer.auth.reject", remaining)
         if (remaining <= 0 && !decisionSent) {
-            Minecraft.getInstance().setScreen(null)
+            Minecraft.getInstance().gui.setScreen(null)
         }
     }
 
@@ -82,7 +82,7 @@ class AuthPromptScreen(
         if (decisionSent) return
         decisionSent = true
         ClientPlayNetworking.send(AuthResponsePayload(requestId, accepted))
-        Minecraft.getInstance().setScreen(null)
+        Minecraft.getInstance().gui.setScreen(null)
     }
 
     override fun shouldCloseOnEsc(): Boolean = true

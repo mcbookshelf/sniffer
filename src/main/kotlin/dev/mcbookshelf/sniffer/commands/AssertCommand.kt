@@ -28,7 +28,7 @@ object AssertCommand {
     fun onInitialize() {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
-                literal<CommandSourceStack?>("assert")
+                literal<CommandSourceStack>("assert")
                     .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
                     .then(argument("expr", ExprArgumentType())
                         .executes {

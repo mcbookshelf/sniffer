@@ -16,7 +16,7 @@ object LogCommand {
     fun onInitialize() {
         CommandRegistrationCallback.EVENT.register { dispatcher, registryAccess, environment ->
             dispatcher.register(
-                literal<CommandSourceStack?>("log")
+                literal<CommandSourceStack>("log")
                     .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
                     .then(argument("log", LogArgumentType())
                         .executes {
