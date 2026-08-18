@@ -42,3 +42,8 @@ replay_*.log
 # kotlin
 
 .kotlin
+
+# Log output from Minecraft bootstrap during tests
+logs/
+
+.fabric

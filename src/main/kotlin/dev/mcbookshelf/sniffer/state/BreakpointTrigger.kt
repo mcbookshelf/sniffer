@@ -4,35 +4,39 @@ import net.minecraft.commands.CommandSourceStack
 import org.slf4j.LoggerFactory
 
 /**
- * Triggers a breakpoint at the current execution position.
+ * Triggers a pause at the current execution position.
  *
- * Notifies DAP stop consumers via [DebugEventBus] and enables debugging
- * mode on [SteppingState]. Called from
- * [dev.mcbookshelf.sniffer.mixin.UnboundDebugMixin] on the server thread,
- * immediately before [PausedExecutionStore.stash].
+ * Notifies DAP stop consumers via [DebugEventBus] and enables debugging mode on [SteppingState].
+ * Called from [dev.mcbookshelf.sniffer.mixin.UnboundDebugMixin] on the server thread, immediately before [PausedExecutionStore.stash].
  *
- * The world is no longer frozen at a breakpoint — only the paused
- * datapack function is suspended; ticks, players and other commands
- * keep running.
+ * The world is not frozen at a breakpoint: only the paused datapack function is suspended, while ticks, players and other commands keep running.
  */
 object BreakpointTrigger {
 
     private val LOGGER = LoggerFactory.getLogger("sniffer")
-    private const val BREAKPOINT_REASON = "breakpoint"
 
+    /** DAP stop reasons, reported verbatim to the client. */
+    const val BREAKPOINT_REASON = "breakpoint"
+    const val STEP_REASON = "step"
+
+    /**
+     * @param reason why execution stopped, as the DAP client is told.
+     *   Only the caller can tell a breakpoint hit from a step landing, and a client shows the two differently.
+     */
     @JvmStatic
-    fun trigger(source: CommandSourceStack) {
+    @JvmOverloads
+    fun trigger(source: CommandSourceStack, reason: String = BREAKPOINT_REASON) {
         try {
             val scope = ScopeManager.get().currentScope
             val fn = scope.map { it.function }.orElse("")
             val line = scope.map { it.line }.orElse(-1)
             val bpId = BreakpointManager.getBreakpointId(fn, line).orElse(-1)
-            DebugEventBus.fireStop(bpId, BREAKPOINT_REASON)
+            DebugEventBus.fireStop(bpId, reason)
 
             SteppingState.setDebugging(true)
             SteppingState.currSource = source
 
-            LOGGER.debug("Breakpoint triggered at {}:{}", fn, line)
+            LOGGER.debug("Execution stopped ({}) at {}:{}", reason, fn, line)
         } catch (e: Exception) {
             LOGGER.error("Error triggering breakpoint", e)
         }

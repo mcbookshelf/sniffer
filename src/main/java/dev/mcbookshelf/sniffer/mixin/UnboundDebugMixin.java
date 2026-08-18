@@ -103,27 +103,30 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
             return;
         }
 
-        boolean shouldPause = false;
+        // Why we are stopping, or null to keep running.
+        // The DAP client is told which of the two it was, so the cause is carried rather than collapsed into a boolean.
+        String stopReason = null;
 
         // 1. Breakpoint check (must happen BEFORE updating the scope line,
         //    because mustStop uses isAtCurrentPosition to avoid re-triggering)
         if (BreakpointManager.INSTANCE.mustStop(sourceFunction, sourceLine)) {
-            shouldPause = true;
+            stopReason = BreakpointTrigger.BREAKPOINT_REASON;
         }
 
-        // 2. Step-pause check (only when already debugging)
-        if (!shouldPause && SteppingState.isDebugging) {
-            shouldPause = shouldStepPause(frame.depth());
+        // 2. Step-pause check (only when already debugging).
+        //    shouldStepPause decrements the multi-step counter, so it is called only when no breakpoint already hit.
+        if (stopReason == null && SteppingState.isDebugging && shouldStepPause(frame.depth())) {
+            stopReason = BreakpointTrigger.STEP_REASON;
         }
 
         // Update the current scope's line so DAP clients see the right position
         ScopeManager.Companion.get().getCurrentScope().ifPresent(scope -> scope.setLine(sourceLine));
 
-        if (shouldPause && sender instanceof CommandSourceStack css) {
+        if (stopReason != null && sender instanceof CommandSourceStack css) {
             // Drop memoized variable subtrees so the DAP client sees fresh
             // entity state (position, NBT, …) on the upcoming pause.
             ScopeManager.Companion.get().refreshForPause();
-            BreakpointTrigger.INSTANCE.trigger(css);
+            BreakpointTrigger.trigger(css, stopReason);
             // Drain the queue, re-queue *this* entry as the first thing to
             // replay on resume, and cancel — so the body of this Unbound.execute
             // does NOT run now. The line will run when the entry is replayed
