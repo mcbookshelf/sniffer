@@ -59,9 +59,9 @@ object WatchCommand {
     fun onInitialize(){
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
-                literal<CommandSourceStack?>("watch")
+                literal<CommandSourceStack>("watch")
                     .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
-                    .then(literal<CommandSourceStack?>("start")
+                    .then(literal<CommandSourceStack>("start")
                         .then(argument("id", StringArgumentType.string())
                             .suggests(DatapackIDSuggestionProvider)
                             .executes {
@@ -71,7 +71,7 @@ object WatchCommand {
                                 return@executes startWatch(server, src, id)
                             }
                         )
-                    ).then(literal<CommandSourceStack?>("stop")
+                    ).then(literal<CommandSourceStack>("stop")
                         .then(argument("id", StringArgumentType.string())
                             .suggests(DatapackIDSuggestionProvider)
                             .executes {
@@ -80,7 +80,7 @@ object WatchCommand {
                                 return@executes stopWatch(src, id)
                             }
                         )
-                    ).then(literal<CommandSourceStack?>("auto")
+                    ).then(literal<CommandSourceStack>("auto")
                         .then(argument("bool", BoolArgumentType.bool())
                             .executes {
                                 //set if watcher will auto reload function when changed
@@ -98,7 +98,7 @@ object WatchCommand {
                             it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto", isAutoReload) }, false)
                             return@executes 1
                         }
-                    ).then(literal<CommandSourceStack?>("reload")
+                    ).then(literal<CommandSourceStack>("reload")
                         .executes {
                             it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.hot_reload")}, false)
                             hotReload(it.source.server)

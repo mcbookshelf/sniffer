@@ -52,7 +52,7 @@ object JvmtimerCommand {
                                 1
                             }
                         )
-                    ).then(literal<CommandSourceStack?>("get")
+                    ).then(literal<CommandSourceStack>("get")
                         .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {
@@ -61,7 +61,7 @@ object JvmtimerCommand {
                                 1
                             }
                         )
-                    ).then(literal<CommandSourceStack?>("reset")
+                    ).then(literal<CommandSourceStack>("reset")
                         .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {
@@ -71,7 +71,7 @@ object JvmtimerCommand {
                                 1
                             }
                         )
-                    ).then(literal<CommandSourceStack?>("disable")
+                    ).then(literal<CommandSourceStack>("disable")
                         .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {

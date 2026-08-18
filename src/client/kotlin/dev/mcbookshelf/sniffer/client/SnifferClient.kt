@@ -49,7 +49,7 @@ class SnifferClient : ClientModInitializer {
         }
         ClientPlayNetworking.registerGlobalReceiver(AuthPromptPayload.TYPE) { payload, _ ->
             val mc = Minecraft.getInstance()
-            mc.execute { mc.setScreen(AuthPromptScreen(payload.requestId, payload.clientDescription, payload.timeoutSeconds)) }
+            mc.execute { mc.gui.setScreen(AuthPromptScreen(payload.requestId, payload.clientDescription, payload.timeoutSeconds)) }
         }
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
             DebugToggles.debugMode = false
