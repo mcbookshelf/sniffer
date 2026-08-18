@@ -1,5 +1,6 @@
 package dev.mcbookshelf.sniffer.commands
 
+import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.BoolArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
@@ -47,13 +48,13 @@ object WatchCommand {
 
     private val LOGGER = LogUtils.getLogger()
 
-    private var createdFunction = emptyList<Pair<Path, Path>>()
-    private var deletedFunction = emptyList<Pair<Path, Path>>()
-    private var modifiedFunction = emptyList<Pair<Path, Path>>()
-
     private val map = ConcurrentHashMap<Path, Entry>()
 
     private var isAutoReload = false
+
+    private const val CREATED_COLOR = "#12B617"
+    private const val MODIFIED_COLOR = "#D1A21E"
+    private const val DELETED_COLOR = "#B61212"
 
     @JvmStatic
     fun onInitialize(){
@@ -206,124 +207,113 @@ object WatchCommand {
     private fun deleted(): List<Pair<Path, Path>> =
         map.entries.filter { it.value.state == State.DELETED }.map { it.key to it.value.datapack }
 
-    private fun snapshotAndClear(){
-        createdFunction = created()
-        modifiedFunction = modified()
-        deletedFunction = deleted()
+    /**
+     * Applies every change seen since the last reload, as a single replacement of the function map.
+     *
+     * Creations, modifications and deletions used to be applied by three independent tasks, each of which read the map, waited for its own parse, then wrote its own result back.
+     * Whichever finished last overwrote the other two, so a reload carrying one kind of change could be undone by the two empty ones running beside it, and the map was written from a worker thread while the server read it.
+     * Parsing still happens off the server thread; the map is read and written once, on the server thread, once the parsing is done.
+     */
+    private fun hotReload(server: MinecraftServer) {
+        val created = created()
+        val modified = modified()
+        val deleted = deleted()
         map.clear()
-    }
+        if (created.isEmpty() && modified.isEmpty() && deleted.isEmpty()) return
 
-    private fun hotReload(server: MinecraftServer){
-        snapshotAndClear()
-        createFunction(server, server.functions, createdFunction)
-        modifyFunction(server, server.functions, modifiedFunction)
-        deleteFunction(server, server.functions, deletedFunction)
-    }
-
-    private fun modifyFunction(server: MinecraftServer, manager: ServerFunctionManager, path: List<Pair<Path, Path>>){
-        val la = (manager as ServerFunctionManagerAccessors).getLibrary() as ServerFunctionLibraryAccessors
-        val dispatcher = la.getDispatcher()
-        val functions = la.getFunctions()
-        val permissions = la.getFunctionCompilationPermissions()
-        val CommandSourceStack = CommandSourceStack(
-            CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, server.overworld(), permissions, "", CommonComponents.EMPTY, server, null
+        val library = (server.functions as ServerFunctionManagerAccessors).getLibrary() as ServerFunctionLibraryAccessors
+        val dispatcher = library.getDispatcher()
+        val source = CommandSourceStack(
+            CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, server.overworld(),
+            library.getFunctionCompilationPermissions(), "", CommonComponents.EMPTY, server, null
         )
-        CompletableFuture.supplyAsync {
-            path.map { (functionPath, datapackPath) ->
-                val identifier = getIdentifier(functionPath, datapackPath)
-                //read function contents
-                val lines = Files.readAllLines(functionPath)
-                try{
-                    return@map CommandFunction.fromLines(identifier, dispatcher, CommandSourceStack, lines)
-                }catch (ex: Exception){
-                    //val text = Component.translatable("sniffer.commands.watcher.modify.failed", identifier.toString()).withColor(CommonColors.RED)
-                    //server.playerList.broadcastSystemMessage(text, false)
-                    LOGGER.error("Failed to modify function: $identifier", ex)
-                    return@map null
-                }
-            }.filterNotNull()
-        }.handle {modified, ex ->
-            if(ex != null){
-                val text = Component.translatable("sniffer.commands.watcher.modify.failed.ex", ex.message ?: "unknown").withColor(CommonColors.RED)
-                server.playerList.broadcastSystemMessage(text, false)
-                LOGGER.error("Failed to modify functions", ex)
+
+        CompletableFuture
+            .supplyAsync {
+                compile(server, created, dispatcher, source, announceFailure = true) to
+                    compile(server, modified, dispatcher, source, announceFailure = false)
             }
-            val updatedFunctions = HashMap<Identifier, CommandFunction<CommandSourceStack>>()
-            updatedFunctions.putAll(functions)
-            modified.forEach {
-                updatedFunctions[it.id()] = it
-                //if a function is with "load" debug tag, execution it when hot reload
-                if(CommandFunctionUniqueAccessors.of(it).debugTags.contains("load")){
-                    manager.execute(it, manager.gameLoopSender)
+            .whenComplete { parsed, ex ->
+                if (ex != null) {
+                    LOGGER.error("Failed to hot reload functions", ex)
+                    server.execute {
+                        server.playerList.broadcastSystemMessage(
+                            Component.translatable("sniffer.commands.watcher.modify.failed.ex", ex.message ?: "unknown")
+                                .withColor(CommonColors.RED),
+                            false
+                        )
+                    }
+                    return@whenComplete
                 }
-                val text = Component.literal("• ${it.id()}").withColor(TextColor.parseColor("#D1A21E").getOrThrow().value)
-                server.playerList.broadcastSystemMessage(text, false)
+                server.execute { splice(server, library, parsed.first, parsed.second, deleted) }
             }
-            la.setFunctions(updatedFunctions)
+    }
+
+    /** Puts the parsed functions into the library, on the server thread, as one write. */
+    private fun splice(
+        server: MinecraftServer,
+        library: ServerFunctionLibraryAccessors,
+        created: List<CommandFunction<CommandSourceStack>>,
+        modified: List<CommandFunction<CommandSourceStack>>,
+        deleted: List<Pair<Path, Path>>,
+    ) {
+        val functions = HashMap(library.getFunctions())
+        created.forEach {
+            functions[it.id()] = it
+            announce(server, "+ ${it.id()}", CREATED_COLOR)
+        }
+        modified.forEach {
+            functions[it.id()] = it
+            announce(server, "• ${it.id()}", MODIFIED_COLOR)
+        }
+        deleted.forEach { (functionPath, datapackPath) ->
+            val identifier = getIdentifier(functionPath, datapackPath)
+            functions.remove(identifier)
+            announce(server, "- $identifier", DELETED_COLOR)
+        }
+        library.setFunctions(functions)
+
+        // A function carrying the `load` debug tag runs on reload, and only once the library holds the version that is about to run.
+        modified.filter { CommandFunctionUniqueAccessors.of(it).debugTags.contains("load") }
+            .forEach { server.functions.execute(it, server.functions.gameLoopSender) }
+    }
+
+    /**
+     * Reads and parses each function, dropping the ones that no longer compile.
+     *
+     * @param announceFailure whether a function that fails to parse is reported in chat as well as logged.
+     *   Only a creation is: there is no message for a modification that fails, and inventing one would need a new translation in every language the mod ships.
+     */
+    private fun compile(
+        server: MinecraftServer,
+        paths: List<Pair<Path, Path>>,
+        dispatcher: CommandDispatcher<CommandSourceStack>,
+        source: CommandSourceStack,
+        announceFailure: Boolean,
+    ): List<CommandFunction<CommandSourceStack>> = paths.mapNotNull { (functionPath, datapackPath) ->
+        val identifier = getIdentifier(functionPath, datapackPath)
+        try {
+            CommandFunction.fromLines(identifier, dispatcher, source, Files.readAllLines(functionPath))
+        } catch (ex: Exception) {
+            LOGGER.error("Failed to parse function: $identifier", ex)
+            if (announceFailure) {
+                server.execute {
+                    server.playerList.broadcastSystemMessage(
+                        Component.translatable("sniffer.commands.watcher.create.failed", identifier)
+                            .withColor(CommonColors.RED),
+                        false
+                    )
+                }
+            }
+            null
         }
     }
 
-    private fun createFunction(server: MinecraftServer,  manager: ServerFunctionManager, path: List<Pair<Path, Path>>){
-        val la = (manager as ServerFunctionManagerAccessors).getLibrary() as ServerFunctionLibraryAccessors
-        val dispatcher = la.getDispatcher()
-        val functions = la.getFunctions()
-        val permissions = la.getFunctionCompilationPermissions()
-        val CommandSourceStack = CommandSourceStack(
-            CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, server.overworld(), permissions, "", CommonComponents.EMPTY, server, null
+    private fun announce(server: MinecraftServer, text: String, color: String) {
+        server.playerList.broadcastSystemMessage(
+            Component.literal(text).withColor(TextColor.parseColor(color).getOrThrow().value),
+            false
         )
-        CompletableFuture.supplyAsync {
-            path.map { (functionPath, datapackPath) ->
-                val identifier = getIdentifier(functionPath, datapackPath)
-                //read function contents
-                val lines = Files.readAllLines(functionPath)
-                try{
-                    return@map CommandFunction.fromLines(identifier, dispatcher, CommandSourceStack, lines)
-                }catch (ex: Exception){
-                    val text = Component.translatable("sniffer.commands.watcher.create.failed", identifier).withColor(CommonColors.RED)
-                    server.playerList.broadcastSystemMessage(text, false)
-                    LOGGER.error("Failed to create function: $identifier", ex)
-                    return@map null
-                }
-            }.filterNotNull()
-        }.handle {created, ex ->
-            if(ex != null){
-                val text = Component.translatable("sniffer.commands.watcher.create.failed.ex", ex.message ?: "unknown").withColor(CommonColors.RED)
-                server.playerList.broadcastSystemMessage(text, false)
-                LOGGER.error("Failed to create functions", ex)
-            }
-            val updatedFunctions = HashMap<Identifier, CommandFunction<CommandSourceStack>>()
-            updatedFunctions.putAll(functions)
-            created.forEach {
-                updatedFunctions[it.id()] = it
-                val text = Component.literal("+ ${it.id()}").withColor(TextColor.parseColor("#12B617").getOrThrow().value)
-                server.playerList.broadcastSystemMessage(text, false)
-            }
-            la.setFunctions(updatedFunctions)
-        }
-    }
-
-    private fun deleteFunction(server: MinecraftServer, manager:ServerFunctionManager, path: List<Pair<Path, Path>>){
-        val la = (manager as ServerFunctionManagerAccessors).getLibrary() as ServerFunctionLibraryAccessors
-        val functions = la.getFunctions()
-        CompletableFuture.supplyAsync {
-            path.map { (functionPath, datapackPath) ->
-                getIdentifier(functionPath, datapackPath)
-            }
-        }.handle {deleted, ex ->
-            if(ex != null){
-                val text = Component.translatable("sniffer.commands.watcher.delete.failed.ex", ex.message ?: "unknown").withColor(CommonColors.RED)
-                server.playerList.broadcastSystemMessage(text, false)
-                LOGGER.error("Failed to delete functions", ex)
-            }
-            val updatedFunctions = HashMap<Identifier, CommandFunction<CommandSourceStack>>()
-            updatedFunctions.putAll(functions)
-            deleted.forEach {
-                updatedFunctions.remove(it)
-                val text = Component.literal("- $it").withColor(TextColor.parseColor("#B61212").getOrThrow().value)
-                server.playerList.broadcastSystemMessage(text, false)
-            }
-            la.setFunctions(updatedFunctions)
-        }
     }
 
     private fun getIdentifier(functionPath: Path, datapackPath: Path): Identifier {

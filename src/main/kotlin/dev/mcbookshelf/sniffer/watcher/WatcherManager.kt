@@ -1,5 +1,6 @@
 package dev.mcbookshelf.sniffer.watcher
 
+import com.mojang.logging.LogUtils
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryWatcher
 import kotlinx.io.IOException
@@ -7,6 +8,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.server.MinecraftServer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.extension
@@ -17,6 +19,7 @@ import kotlin.io.path.extension
  * for hot-reload processing.
  */
 object WatcherManager {
+    private val LOGGER = LogUtils.getLogger()
     @JvmStatic
     private val WATCHERS = ConcurrentHashMap<String, DirectoryWatcher>()
     @JvmStatic
@@ -48,26 +51,17 @@ object WatcherManager {
         val future = watcher.watchAsync()
 
         future.whenComplete { _, throwable ->
-            if (throwable != null) {
-                WATCHERS.remove(id)
-                FUTURES.remove(id)
-                server.execute {
-                    server.playerList.broadcastSystemMessage(
-                        Component.literal("[watch:$id] watcher stopped: " + throwable.message),
-                        false
-                    )
-                }
-                throwable.printStackTrace()
-            }else {
-                WATCHERS.remove(id)
-                WATCHERS.remove(id)
-                FUTURES.remove(id)
-                server.execute {
-                    server.playerList.broadcastSystemMessage(
-                        Component.literal("[watch:$id] watcher stopped"),
-                        false
-                    )
-                }
+            WATCHERS.remove(id)
+            FUTURES.remove(id)
+            // [stop] cancels the future, so a cancellation is how a watcher normally ends and the caller has already said so.
+            // Anything else ended it on its own, and is the only case worth a log line and a message nobody asked for.
+            val failure = throwable?.takeUnless { it is CancellationException } ?: return@whenComplete
+            LOGGER.error("Watcher stopped: {}", id, failure)
+            server.execute {
+                server.playerList.broadcastSystemMessage(
+                    Component.literal("[watch:$id] watcher stopped: ${failure.message ?: failure.javaClass.simpleName}"),
+                    false
+                )
             }
         }
 

@@ -25,6 +25,14 @@ repositories {
 	maven { url 'https://jitpack.io' }
 }
 
+// Game tests live in their own source set so they stay out of the shipped jar.
+sourceSets {
+	gametest {
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+	}
+}
+
 loom {
 	splitEnvironmentSourceSets()
 
@@ -32,6 +40,20 @@ loom {
 		"sniffer" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
+		}
+		"sniffer-gametest" {
+			sourceSet sourceSets.gametest
+		}
+	}
+
+	runs {
+		gametest {
+			server()
+			configName = "Game Test"
+			source sourceSets.gametest
+			vmArg "-Dfabric-api.gametest"
+			vmArg "-Dfabric-api.gametest.report-file=${projectDir}/build/gametest-results.xml"
+			runDir "build/gametest"
 		}
 	}
 
@@ -41,6 +63,8 @@ loom {
 
 configurations {
 	shadowImpl
+	// Mockito must be loaded as a JVM agent: self-attach is disabled on Java 25.
+	mockitoAgent
 }
 
 configurations.shadowImpl.extendsFrom(configurations.implementation)
@@ -48,6 +72,8 @@ configurations.shadowImpl.extendsFrom(configurations.implementation)
 dependencies {
 	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.11.4"
+	testImplementation "org.mockito:mockito-core:5.20.0"
+	mockitoAgent("org.mockito:mockito-core:5.20.0") { transitive = false }
 
 	implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.24.0'
 	implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j.debug:0.24.0'
@@ -91,6 +117,11 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named("test") {
 	useJUnitPlatform()
+	jvmArgs "-javaagent:${configurations.mockitoAgent.singleFile}"
+	testLogging {
+		events "failed"
+		exceptionFormat "full"
+	}
 }
 
 
@@ -138,4 +169,42 @@ publishing {
 
 loom {
 	accessWidenerPath = file("src/main/resources/sniffer.accesswidener")
+}
+
+// Applied at the end: in the plugins block, JaCoCo resolves repositories before
+// Loom has finished registering its own, which breaks the Minecraft setup.
+apply plugin: 'jacoco'
+
+// The game tests exercise the mixin layer, which the JUnit run never loads,
+// so the headless run is instrumented too and both traces feed one report.
+jacoco.applyTo(tasks.named('runGametest').get())
+
+tasks.named('runGametest') {
+	// The JaCoCo trace is an output, which would otherwise let Gradle skip the run.
+	outputs.upToDateWhen { false }
+	jacoco {
+		destinationFile = layout.buildDirectory.file('jacoco/runGametest.exec').get().asFile
+	}
+}
+
+// Reports both runs, so it launches the game: `./gradlew jacocoTestReport`.
+tasks.named('jacocoTestReport') {
+	dependsOn tasks.named('test'), tasks.named('runGametest')
+	// Whichever traces exist: `test` alone still reports, `runGametest test` reports both.
+	executionData.setFrom(files(
+		layout.buildDirectory.file('jacoco/test.exec'),
+		layout.buildDirectory.file('jacoco/runGametest.exec'),
+	).filter { it.exists() })
+	reports {
+		html.required = true
+		xml.required = true
+	}
+	// Mixins and accessors only ever run inside a launched game, so they can
+	// never be covered here and would just drag the numbers down.
+	classDirectories.setFrom(
+		sourceSets.main.output.asFileTree.matching {
+			exclude 'dev/mcbookshelf/sniffer/mixin/**'
+			exclude 'dev/mcbookshelf/sniffer/accessor/**'
+		}
+	)
 }

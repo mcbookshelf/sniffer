@@ -1,0 +1,56 @@
+{
+	"schemaVersion": 1,
+	"id": "sniffer-gametest",
+	"version": "1.0.0",
+	"name": "Sniffer Game Tests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.ScopeAndSourceMappingIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.DebugDirectiveIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.AssertCommandIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.LogCommandIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.JvmtimerCommandIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.HotReloadIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.DapProtocolIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.BreakpointCommandIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.AuthGateIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.DebugModeCommandIntegrationGameTest"
+			}
+		]
+	},
+	"depends": {
+		"fabricloader": "*",
+		"minecraft": "*",
+		"sniffer": "*"
+	}
+}
