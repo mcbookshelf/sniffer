@@ -1,67 +1,67 @@
 package dev.mcbookshelf.sniffer.client.auth
 
 import dev.mcbookshelf.sniffer.network.AuthResponsePayload
-import io.wispforest.owo.ui.base.BaseOwoScreen
-import io.wispforest.owo.ui.component.ButtonComponent
-import io.wispforest.owo.ui.component.UIComponents
-import io.wispforest.owo.ui.container.FlowLayout
-import io.wispforest.owo.ui.container.UIContainers
-import io.wispforest.owo.ui.core.HorizontalAlignment
-import io.wispforest.owo.ui.core.Insets
-import io.wispforest.owo.ui.core.OwoUIAdapter
-import io.wispforest.owo.ui.core.Sizing
-import io.wispforest.owo.ui.core.Surface
-import io.wispforest.owo.ui.core.VerticalAlignment
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.components.Button
+import net.minecraft.client.gui.components.MultiLineTextWidget
+import net.minecraft.client.gui.components.StringWidget
+import net.minecraft.client.gui.layouts.FrameLayout
+import net.minecraft.client.gui.layouts.LinearLayout
+import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import java.util.UUID
 
 /**
- * Owo-lib modal that asks the player to accept or reject an incoming
- * Debug Adapter Protocol attach attempt impersonating their account.
+ * Modal that asks the player to accept or reject an incoming Debug Adapter
+ * Protocol attach attempt impersonating their account.
  */
 class AuthPromptScreen(
     private val requestId: UUID,
     private val clientDescription: String,
     timeoutSeconds: Int,
-) : BaseOwoScreen<FlowLayout>(Component.translatable("sniffer.auth.title")) {
+) : Screen(Component.translatable("sniffer.auth.title")) {
 
     private var decisionSent = false
     private val deadlineMs: Long = System.currentTimeMillis() + timeoutSeconds * 1000L
-    private var rejectButton: ButtonComponent? = null
+    private val layout = LinearLayout.vertical().spacing(8)
+    private var rejectButton: Button? = null
 
-    override fun createAdapter(): OwoUIAdapter<FlowLayout> =
-        OwoUIAdapter.create(this, UIContainers::verticalFlow)
-
-    override fun build(rootComponent: FlowLayout) {
-        rootComponent
-            .surface(Surface.VANILLA_TRANSLUCENT)
-            .horizontalAlignment(HorizontalAlignment.CENTER)
-            .verticalAlignment(VerticalAlignment.CENTER)
-
-        val panel = UIContainers.verticalFlow(Sizing.content(), Sizing.content())
-            .gap(8)
-            .padding(Insets.of(16))
-            .surface(Surface.DARK_PANEL)
-            .horizontalAlignment(HorizontalAlignment.CENTER) as FlowLayout
-
-        panel.child(UIComponents.label(Component.translatable("sniffer.auth.title")))
-        panel.child(UIComponents.label(Component.translatable("sniffer.auth.body")))
-        panel.child(UIComponents.label(Component.literal(clientDescription)))
-
-        val buttons = UIContainers.horizontalFlow(Sizing.content(), Sizing.content())
-            .gap(8) as FlowLayout
-        buttons.child(
-            UIComponents.button(Component.translatable("sniffer.auth.accept")) { _ -> respond(true) }
-                .horizontalSizing(Sizing.fixed(80))
+    override fun init() {
+        super.init()
+        layout.defaultCellSetting().alignHorizontallyCenter()
+        layout.addChild(StringWidget(title, font))
+        layout.addChild(
+            MultiLineTextWidget(Component.translatable("sniffer.auth.body"), font)
+                .setMaxWidth(width - 50)
+                .setCentered(true)
         )
-        rejectButton = UIComponents.button(Component.translatable("sniffer.auth.reject", remainingSeconds())) { _ -> respond(false) }
-            .horizontalSizing(Sizing.fixed(80)) as ButtonComponent
-        buttons.child(rejectButton!!)
-        panel.child(buttons)
+        layout.addChild(
+            MultiLineTextWidget(Component.literal(clientDescription), font)
+                .setMaxWidth(width - 50)
+                .setCentered(true)
+        )
 
-        rootComponent.child(panel)
+        val buttons = layout.addChild(LinearLayout.horizontal().spacing(8))
+        buttons.defaultCellSetting().paddingTop(16)
+        buttons.addChild(
+            Button.builder(Component.translatable("sniffer.auth.accept")) { respond(true) }
+                .width(80)
+                .build()
+        )
+        rejectButton = buttons.addChild(
+            Button.builder(Component.translatable("sniffer.auth.reject", remainingSeconds())) { respond(false) }
+                .width(80)
+                .build()
+        )
+
+        layout.visitWidgets(this::addRenderableWidget)
+        repositionElements()
+    }
+
+    override fun repositionElements() {
+        layout.arrangeElements()
+        FrameLayout.centerInRectangle(layout, rectangle)
     }
 
     override fun tick() {
