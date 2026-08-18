@@ -79,7 +79,7 @@ The debugger can be controlled directly from Minecraft using the following comma
 
 * Continue
 
-When the game is "frozen", you can use the command `/breakpoint move` to unfreeze the game and continue running.
+When the game is "frozen", you can use the command `/breakpoint continue` to unfreeze the game and continue running.
 
 * Get Macro Arguments
 
@@ -191,7 +191,7 @@ Command Syntax:
 - `watch auto [true|false]`: Set whether auto reloading is enabled. Auto reloading will apply any change once the watcher detects it. Default is `false`. If value is not provided, it will tell you if the auto reloading is enabled.
 
 say start
-#breakpoint
+#!breakpoint
 $say $(msg)
 say end
 ```
@@ -213,7 +213,7 @@ say 2
 
 #test: test2
 say A
-#breakpoint
+#!breakpoint
 say B
 ```
 

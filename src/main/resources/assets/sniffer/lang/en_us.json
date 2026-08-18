@@ -10,7 +10,7 @@
   "sniffer.commands.breakpoint.get.fail.error": "Unexpected error while getting the value of argument: %s",
   "sniffer.commands.breakpoint.get.fail.not_macro": "Current function is not a macro",
   "sniffer.commands.breakpoint.move": "The game is now moving on",
-  "sniffer.commands.breakpoint.move.not_debugging": "Can only use `move` command in breakpoint mode",
+  "sniffer.commands.breakpoint.move.not_debugging": "Can only use `continue` command in breakpoint mode",
   "sniffer.commands.breakpoint.set": "Breakpoint has triggered",
   "sniffer.commands.breakpoint.step.fail": "Can only use `step` command in breakpoint mode",
   "sniffer.commands.jvmtimer.disable": "Timer %s is disabled",
