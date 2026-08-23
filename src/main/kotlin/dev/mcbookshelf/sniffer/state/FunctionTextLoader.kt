@@ -4,13 +4,14 @@ import net.minecraft.resources.Identifier
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Stores raw source lines of loaded `.mcfunction` files, keyed by identifier.
+ * Holds the raw source lines of every loaded `.mcfunction` file.
+ * It is filled from `CommandFunction.fromLines`, which the reload runs on worker threads, hence the concurrent map.
  *
  * @author XiLaiTL
+ * @author theogiraudet
  */
 object FunctionTextLoader {
 
-    // Concurrent because Minecraft parses every function of a reload in parallel on the reload executor, so [put] is called from several threads at once.
     private val FUNCTION_TEXT = ConcurrentHashMap<Identifier, List<String>>()
 
     @JvmStatic

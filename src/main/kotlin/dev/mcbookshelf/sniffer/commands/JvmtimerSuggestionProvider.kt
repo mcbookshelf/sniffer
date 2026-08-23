@@ -8,7 +8,9 @@ import net.minecraft.commands.CommandSourceStack
 import java.util.concurrent.CompletableFuture
 
 /**
- * Suggests existing timer IDs for `/jvmtimer` command tab-completion.
+ * Suggests the timers `/jvmtimer` already knows about.
+ *
+ * @author Alumopper
  */
 object JvmtimerSuggestionProvider: SuggestionProvider<CommandSourceStack> {
     override fun getSuggestions(

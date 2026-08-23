@@ -8,18 +8,14 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 
 /**
- * Cloth Config integration for the Sniffer mod.
- * Provides a GUI interface for configuring the debugger.
+ * Builds the Cloth Config screen the mod settings are edited from.
  *
  * @author theogiraudet
  */
 object DebuggerClothConfig {
 
     /**
-     * Creates a new Cloth Config screen for the Sniffer.
-     *
-     * @param parent The parent screen
-     * @return The config screen
+     * @param parent the screen to go back to when the config screen closes
      */
     @JvmStatic
     fun createConfigScreen(parent: Screen): Screen {
@@ -44,7 +40,6 @@ object DebuggerClothConfig {
             )
         }
 
-        // Host entry
         mainCategory.addEntry(
             entryBuilder.startStrField(
                 Component.translatable("sniffer.config.host"),
@@ -58,7 +53,6 @@ object DebuggerClothConfig {
                 .build()
         )
 
-        // Port entry
         mainCategory.addEntry(
             entryBuilder.startIntField(
                 Component.translatable("sniffer.config.port"),
@@ -72,7 +66,6 @@ object DebuggerClothConfig {
                 .build()
         )
 
-        // Path entry
         mainCategory.addEntry(
             entryBuilder.startStrField(
                 Component.translatable("sniffer.config.path"),
@@ -84,7 +77,6 @@ object DebuggerClothConfig {
                 .build()
         )
 
-        // Auth enabled toggle
         mainCategory.addEntry(
             entryBuilder.startBooleanToggle(
                 Component.translatable("sniffer.config.authEnabled"),
@@ -96,7 +88,6 @@ object DebuggerClothConfig {
                 .build()
         )
 
-        // Auth prompt timeout
         mainCategory.addEntry(
             entryBuilder.startIntField(
                 Component.translatable("sniffer.config.authPromptTimeoutSeconds"),

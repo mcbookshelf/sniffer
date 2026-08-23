@@ -21,14 +21,13 @@ import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
 
 /**
- * A DAP (Debug Adapter Protocol) server implementation using LSP4J.
+ * Debug Adapter Protocol server backed by LSP4J.
  *
- * This class is a thin translator: it converts DAP protocol requests into
- * v2 [IInput] objects, dispatches them through [SnifferDispatcher],
- * and translates the returned [Output] back into DAP responses.
- * No debugger logic lives here.
+ * It is a translator and holds no debugger logic: requests become [IInput] objects,
+ * go through [SnifferDispatcher], and their [Output] is turned back into DAP responses.
  *
  * @author theogiraudet
+ * @author Alumopper
  */
 class DapServer : IDebugProtocolServer {
 
@@ -49,9 +48,8 @@ class DapServer : IDebugProtocolServer {
     private var client: IDebugProtocolClient? = null
 
     /**
-     * DAP `sourceReference` per ZIP-packed function, so each source gets a
-     * distinct reference (clients cache source content by reference).
-     * Only touched from the server thread (see [onServerThread]).
+     * One DAP `sourceReference` per function packed in a zip, since clients cache source content by reference.
+     * Only touched from the server thread.
      */
     private val zipSourceReferences = HashMap<String, Int>()
     private var nextZipSourceReference = 1
@@ -62,7 +60,6 @@ class DapServer : IDebugProtocolServer {
         DebugEventBus.onShutdown(::exit)
     }
 
-    // ===== Lifecycle Methods =====
 
     override fun initialize(args: InitializeRequestArguments): CompletableFuture<Capabilities> {
         LOGGER.debug("Initialize request received with arguments: {}", args)
@@ -107,7 +104,6 @@ class DapServer : IDebugProtocolServer {
         return CompletableFuture.completedFuture(null)
     }
 
-    // ===== Breakpoint Methods =====
 
     override fun setBreakpoints(args: SetBreakpointsArguments): CompletableFuture<SetBreakpointsResponse> {
         LOGGER.debug("SetBreakpoints request received with arguments: {}", args)
@@ -150,7 +146,6 @@ class DapServer : IDebugProtocolServer {
         return CompletableFuture.completedFuture(SetExceptionBreakpointsResponse())
     }
 
-    // ===== Execution Control Methods =====
 
     override fun next(args: NextArguments): CompletableFuture<Void> {
         LOGGER.debug("Next request received with arguments: {}", args)
@@ -181,7 +176,6 @@ class DapServer : IDebugProtocolServer {
         return CompletableFuture.completedFuture(null)
     }
 
-    // ===== Inspection Methods =====
 
     override fun threads(): CompletableFuture<ThreadsResponse> {
         LOGGER.debug("Threads request received")
@@ -286,7 +280,6 @@ class DapServer : IDebugProtocolServer {
         }
     }
 
-    // ===== Event Handlers =====
 
     fun setClient(client: IDebugProtocolClient) {
         LOGGER.debug("Setting client: {}", client)
@@ -344,18 +337,16 @@ class DapServer : IDebugProtocolServer {
         }
     }
 
-    // ===== Dispatch & Translation Helpers =====
 
     /**
      * Runs [block] on the Minecraft server thread and completes the returned future with its result.
-     * Everything that reads live game state (scopes, variables, entity NBT, scoreboard, breakpoint indices) must go through here.
-     * DAP requests arrive on WebSocket/LSP4J threads, and the world keeps ticking while the debugger is paused.
+     * DAP requests arrive on WebSocket threads and the world keeps ticking while the debugger is paused,
+     * so everything reading live game state has to go through here.
      */
     private fun <T> onServerThread(block: () -> T): CompletableFuture<T> {
         val server = runCatching { ServerReference.get() }.getOrNull()
             ?: return CompletableFuture.failedFuture(IllegalStateException("Minecraft server not available"))
-        // MinecraftServer is an Executor that runs submitted tasks on the
-        // server thread (or inline if already on it).
+        // MinecraftServer is an Executor running submitted tasks on the server thread, or inline if already on it.
         return CompletableFuture.supplyAsync(Supplier { block() }, server)
     }
 
@@ -380,8 +371,6 @@ class DapServer : IDebugProtocolServer {
             when (path.kind) {
                 RealPath.Kind.DIRECTORY -> source.path = path.path
                 RealPath.Kind.ZIP -> {
-                    // Clients cache source content by reference, so each
-                    // zipped function needs its own stable reference.
                     source.sourceReference = zipSourceReferences.getOrPut(functionName) { nextZipSourceReference++ }
                     source.path = path.path
                 }

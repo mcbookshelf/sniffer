@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory
  * Holds the current [MinecraftServer] reference for the debugger.
  *
  * Set on `SERVER_STARTED`, cleared on `SERVER_STOPPED`.
+ *
+ * @author theogiraudet
  */
 object ServerReference {
 

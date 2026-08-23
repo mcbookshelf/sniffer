@@ -3,16 +3,13 @@ package dev.mcbookshelf.sniffer.state
 import java.util.UUID
 
 /**
- * Server-side, per-player debug-mode state.
+ * Whether each player has debug mode on, as the server knows it.
  *
- * Debug mode is a gamemode-like, HUD-only toggle: it does **not** gate any
- * debugging capability (breakpoints still fire regardless) — it only controls
- * whether the player sees the Sniffer HUD overlay. Several players on the
- * same server can therefore have different values.
+ * Debug mode gates nothing, breakpoints fire either way, it only decides whether the player sees the HUD overlay,
+ * so two players on the same server can hold different values.
+ * The values live in memory for as long as the server runs, and survive a reconnect.
  *
- * Persistence is in-memory for the lifetime of the server: a player who
- * reconnects within the same session keeps their setting. The map is cleared
- * on server start / stop via [clear].
+ * @author theogiraudet
  */
 object DebugModeState {
 

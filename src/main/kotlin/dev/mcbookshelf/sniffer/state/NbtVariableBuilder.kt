@@ -5,11 +5,11 @@ import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.Tag
 
 /**
- * Pure, stateless builder that turns an NBT [Tag] into a [VariableNode] tree.
+ * Turns an NBT [Tag] into a [VariableNode] tree.
+ * Compounds and collections keep their children unbuilt until the client expands them, and primitives are leaves.
  *
- * Compound and collection tags produce lazy nodes: their children are not
- * materialized until the DAP client expands them. Primitives become leaves.
- * Replaces the old stateful `NbtElementVariableVisitor`.
+ * @author theogiraudet
+ * @author Alumopper
  */
 object NbtVariableBuilder {
 

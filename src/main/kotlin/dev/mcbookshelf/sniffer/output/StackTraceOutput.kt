@@ -6,8 +6,9 @@ import dev.mcbookshelf.sniffer.dispatch.Output
 /**
  * Result of a paginated stack trace query.
  *
- * @property frames the requested slice of the call stack.
- * @property totalFrames total number of frames in the full stack.
+ * @property frames the requested slice of the call stack
+ * @property totalFrames how many frames the whole stack holds
+ * @author theogiraudet
  */
 data class StackTraceOutput(
     val frames: List<StackFrameData>,
@@ -15,12 +16,13 @@ data class StackTraceOutput(
 ) : Output
 
 /**
- * Domain representation of a single stack frame.
+ * A single frame of the call stack.
  *
- * @property id unique scope/frame ID.
- * @property functionName the Minecraft function path (e.g. "namespace:path").
- * @property line 0-indexed line number within the function.
- * @property path the resolved filesystem path and kind, or null if unresolved.
+ * @property id id of the scope the frame stands for
+ * @property functionName location of the function, as `namespace:path`
+ * @property line zero indexed line inside that function
+ * @property path where the function was loaded from, `null` if it could not be resolved
+ * @author theogiraudet
  */
 data class StackFrameData(
     val id: Int,

@@ -20,9 +20,10 @@ import net.minecraft.util.CommonColors
 import org.slf4j.Logger
 
 /**
- * Registers the `/assert` debug command that evaluates an expression
- * and reports whether the assertion passed or failed, including the
- * call stack on failure.
+ * The `/assert` command, which evaluates an expression and reports the call stack when it does not hold.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 object AssertCommand {
 
@@ -31,9 +32,9 @@ object AssertCommand {
     /**
      * Signals a failed assertion, carrying the same message that was broadcast.
      *
-     * The failure has to leave by an exception rather than by returning 0: vanilla derives a command's success
-     * from whether it returned at all, so returning 0 would make `execute store success` and `execute if`
-     * read a failed assertion as a passing one.
+     * The failure has to leave by an exception rather than by returning 0,
+     * because vanilla derives the success of a command from whether it returned at all.
+     * Returning 0 would make `execute store success` and `execute if` read a failed assertion as a passing one.
      */
     private val ASSERT_FAILED = DynamicCommandExceptionType { it as Component }
 

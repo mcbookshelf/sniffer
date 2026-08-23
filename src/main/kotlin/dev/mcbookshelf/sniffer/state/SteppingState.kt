@@ -5,34 +5,23 @@ import net.minecraft.commands.CommandSourceStack
 
 
 /**
- * Single source of truth for the stepping-runtime state of the debugger.
+ * Runtime state of the stepping engine, written by the step handlers and read by `UnboundDebugMixin`.
  *
- * Fields here are read and written from:
- *  - [dev.mcbookshelf.sniffer.handlers.StepHandler] (via the dispatcher, on user input)
- *  - `UnboundDebugMixin` (the single mixin that checks breakpoints and stepping)
- *  - [isStepIn] / [isStepOver] / [isStepOut] (queried by `UnboundDebugMixin`)
+ * The mixin reads these fields directly rather than through getters, so they are exposed with `@JvmField`,
+ * which turns them into real `public static` Java fields supporting `++` and plain assignment.
  *
- * Because the mixin accesses these fields directly (not via getters/setters),
- * they are exposed with `@JvmField` — making them real `public static` Java
- * fields that support `++` / `--` / direct assignment.
+ * @author theogiraudet
  */
 object SteppingState {
 
     /**
-     * Whether execution is currently paused on a breakpoint/step.
-     *
-     * Read directly by `UnboundDebugMixin` (hence `@JvmField`); writes should
-     * go through [setDebugging] so every change is mirrored to clients via
-     * [SetDebuggingPayload] for the HUD bug icon.
+     * Whether execution is currently paused on a breakpoint or a step.
+     * Writes should go through [setDebugging] so the HUD bug icon stays in sync.
      */
     @JvmField
     var isDebugging: Boolean = false
 
-    /**
-     * Update [isDebugging] and broadcast the new value to every online
-     * player so the HUD bug overlay can appear/disappear in sync with
-     * paused execution.
-     */
+    /** Updates [isDebugging] and broadcasts the new value to every online player. */
     @JvmStatic
     fun setDebugging(value: Boolean) {
         if (isDebugging == value) return
@@ -41,21 +30,19 @@ object SteppingState {
     }
 
     /**
-     * Remaining lines to execute before re-pausing. Decremented by
-     * [UnboundDebugMixin] each time a function line matches the active
-     * [stepType] depth policy. When this reaches 0, execution pauses.
+     * Remaining lines to execute before pausing again.
+     * `UnboundDebugMixin` decrements it on every line matching the depth policy of [stepType].
      */
     @JvmField
     var stepsRemaining: Int = 0
 
-    /** Active stepping policy (`STEP_IN`/`STEP_OVER`/`STEP_OUT`). */
+    /** Active stepping policy. */
     @JvmField
     var stepType: StepType = StepType.STEP_IN
 
     /**
-     * Frame depth at which the current step was initiated; `-1` when no
-     * step is in progress. Used by STEP_OVER/STEP_OUT in `UnboundDebugMixin`
-     * to decide when to re-pause. Written by [StepHandler].
+     * Frame depth at which the current step was initiated, `-1` when no step is in progress.
+     * `STEP_OVER` and `STEP_OUT` compare against it to decide when to pause again.
      */
     @JvmField
     var stepDepth: Int = -1
@@ -74,7 +61,7 @@ object SteppingState {
     @JvmStatic
     fun isStepOut(): Boolean = stepType == StepType.STEP_OUT
 
-    /** Clear all stepping state — called on server start and on DAP disconnect. */
+    /** Clears every stepping field. Called on server start and on DAP disconnect. */
     @JvmStatic
     fun reset() {
         setDebugging(false)
@@ -84,10 +71,7 @@ object SteppingState {
         currSource = null
     }
 
-    /**
-     * Full stepping reset: clears stepping counters and drops any
-     * paused execution. Called during lifecycle transitions.
-     */
+    /** Clears the stepping fields and drops any paused execution. */
     @JvmStatic
     fun resetAll() {
         reset()

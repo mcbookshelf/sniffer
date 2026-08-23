@@ -5,16 +5,12 @@ import net.minecraft.nbt.CompoundTag
 import java.util.WeakHashMap
 
 /**
- * External store for macro arguments, keyed by [InstantiatedFunction] instance.
+ * Holds the arguments a macro was instantiated with, keyed by the resulting [InstantiatedFunction].
+ * `MacroInstantiationMixin` fills it, and a debug scope reads it to expose those arguments as variables.
  *
- * When a [net.minecraft.commands.functions.MacroFunction] is instantiated,
- * [MacroInstantiationMixin] captures the `CompoundTag` arguments and stores
- * them here. The scope manager later retrieves them when building debug
- * scopes for variable inspection.
+ * The [WeakHashMap] lets an entry go as soon as Minecraft evicts the function from its cache.
  *
- * Uses a [WeakHashMap] so entries are garbage-collected when the
- * [InstantiatedFunction] is no longer referenced (e.g. evicted from the
- * macro function's LRU cache).
+ * @author theogiraudet
  */
 object MacroArgsStore {
 

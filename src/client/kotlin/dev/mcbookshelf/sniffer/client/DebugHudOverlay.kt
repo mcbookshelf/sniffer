@@ -10,13 +10,10 @@ import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
 
 /**
- * Top-right HUD element that renders Sniffer's debug icons.
+ * Draws the debug icons in the top right corner, and nothing at all while debug mode is off.
+ * A status icon says whether a DAP client is attached, and the bug icon is added on top while an execution is paused.
  *
- * Debug mode is the per-user gate: when it is off, nothing is drawn at all.
- * When it is on, the overlay always shows a DAP connection status icon
- * ([CONNECTED_ICON] or [DISCONNECTED_ICON]) and additionally overlays the
- * [BUG_ICON] whenever active debugging is in progress — i.e. the server
- * thread is currently paused on a breakpoint or stepping.
+ * @author theogiraudet
  */
 class DebugHudOverlay : HudElement {
 

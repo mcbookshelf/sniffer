@@ -3,17 +3,14 @@ package dev.mcbookshelf.sniffer.state
 /**
  * A single variable displayed in the debugger.
  *
- * Replaces the old eager [DebuggerVariable] data class. Children are produced
- * lazily by [childrenFactory] the first time [children] is called, and are
- * registered with the [VariableRegistry] so the DAP client can reference them.
+ * Children are produced by [childrenFactory] the first time [children] is asked for,
+ * and registered with the [VariableRegistry] so the DAP client can reference them.
+ * [invalidate] then drops them again, which is how a node rebuilds from fresh game state.
  *
- * Leaves pass `childrenFactory = null`. A subsequent call to [invalidate]
- * drops the memoized children (and their descendant IDs) from the registry,
- * so that the next [children] call rebuilds fresh state — this is how the
- * between-pause refresh mechanism keeps entity positions current.
- *
- * @param isRoot whether this node should appear directly in its owning scope
- *               rather than nested under another variable.
+ * @param id the reference the DAP client uses to ask for the children of this node
+ * @param isRoot whether the node belongs directly to its scope rather than under another variable
+ * @param childrenFactory `null` for a leaf
+ * @author theogiraudet
  */
 class VariableNode(
     val id: Int,
@@ -36,8 +33,8 @@ class VariableNode(
     }
 
     /**
-     * Drops memoized children recursively and removes their IDs from [registry].
-     * The node itself stays registered; only its subtree is evicted.
+     * Drops the memoized children recursively and removes their ids from [registry].
+     * The node itself stays registered, only its subtree is evicted.
      */
     fun invalidate(registry: VariableRegistry) {
         val current = cachedChildren ?: return

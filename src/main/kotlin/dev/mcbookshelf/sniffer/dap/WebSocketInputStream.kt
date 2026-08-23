@@ -6,13 +6,8 @@ import java.io.InputStream
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * Adapts WebSocket messages into an InputStream.
- * This class provides a bridge between the WebSocket message-based API and
- * the Java stream-based API by converting incoming WebSocket messages
- * into a continuous input stream that can be consumed by stream-based APIs.
- *
- * The class blocks when no data is available and waits for messages
- * to arrive on the provided message queue.
+ * Bridges the messages of a WebSocket and the stream API the DAP launcher reads from.
+ * Messages are taken from [queue] one after the other, and a read blocks while that queue is empty.
  *
  * @author theogiraudet
  */

@@ -4,23 +4,18 @@ import kotlin.reflect.KClass
 
 /**
  * Handles one concrete [IInput] subtype.
+ * Each handler lives in its own file and is added to the list built by `HandlersRegistry`.
  *
- * The generic parameter [I] plus [inputType] let the [Dispatcher] route
- * inputs by exact class without any `instanceof` check. Each handler is
- * expected to live in its own file and to be added to the central list
- * in `HandlersRegistry.kt`.
- *
- * @param I the [IInput] subtype this handler is responsible for.
+ * @param I the [IInput] subtype this handler is responsible for
+ * @author theogiraudet
  */
 interface Handler<I : IInput> {
 
-    /** The exact [IInput] subtype this handler accepts. Used as the routing key. */
+    /** Routing key of the handler, the exact input subtype it accepts. */
     val inputType: KClass<I>
 
     /**
-     * Execute the action described by [input], possibly mutating state through [ctx],
-     * and return an [Output] that the calling entrypoint will translate back to its
-     * native response format.
+     * Runs the action described by [input] and returns what the entrypoint has to answer with.
      */
     fun handle(input: I, ctx: Context): Output
 }

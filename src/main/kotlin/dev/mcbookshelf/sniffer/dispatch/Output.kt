@@ -1,11 +1,9 @@
 package dev.mcbookshelf.sniffer.dispatch
 
 /**
- * Marker interface for the result of handling an [IInput].
+ * The result of handling an [IInput], which the entrypoint translates back into its own response format.
+ * Implementations live in `dev.mcbookshelf.sniffer.output`.
  *
- * Entrypoints are responsible for translating an [Output] back into
- * their native response format (DAP response, chat feedback, ...).
- *
- * Concrete outputs live in `dev.mcbookshelf.sniffer.output`.
+ * @author theogiraudet
  */
 interface Output

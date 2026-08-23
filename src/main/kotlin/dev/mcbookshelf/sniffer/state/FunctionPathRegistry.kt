@@ -5,11 +5,8 @@ import java.nio.file.Path
 import java.util.Optional
 
 /**
- * Global registry mapping Minecraft function identifiers (`namespace:path`)
- * to their physical filesystem paths.
- *
- * Populated by [FunctionPathGetter] on datapack reload and queried by
- * [BreakpointManager] and [ScopeManager.DebugScope] for path resolution.
+ * Maps a function location to the file it was loaded from.
+ * Filled by [FunctionPathGetter] on every datapack reload, and read wherever a location has to become a path.
  *
  * @author theogiraudet
  */

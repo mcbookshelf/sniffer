@@ -1,25 +1,20 @@
 package dev.mcbookshelf.sniffer.dispatch
 
 /**
- * Marker interface for an action request sent to the [Dispatcher].
+ * An action request sent to the [Dispatcher].
  *
- * Each concrete [IInput] corresponds to exactly one debugger action
- * (step over, step into, set breakpoint, ...) and is produced by an
- * entrypoint (DAP server, in-game command) from its own native request
- * format.
+ * One implementation stands for one debugger action, and is built by an entrypoint from its own request format.
+ * Implementations are immutable data classes carrying nothing but the parameters of the action.
  *
- * Implementations should be immutable data classes carrying only the
- * parameters of the action.
+ * @author theogiraudet
  */
 interface IInput
 
 /**
- * Specialization of [IInput] for step actions that carry a [lines] count
- * (number of commands to advance before re-pausing).
+ * The inputs of the three step actions.
  *
- * Implemented by [dev.mcbookshelf.sniffer.input.StepInInput],
- * [dev.mcbookshelf.sniffer.input.StepOverInput], and
- * [dev.mcbookshelf.sniffer.input.StepOutInput].
+ * @property lines how many commands to run before pausing again
+ * @author theogiraudet
  */
 interface StepInput : IInput {
     val lines: Int

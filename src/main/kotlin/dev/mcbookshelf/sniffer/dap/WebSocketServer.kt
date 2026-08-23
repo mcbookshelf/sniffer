@@ -25,11 +25,11 @@ import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * WebSocket server implementation for the Debug Adapter Protocol.
- * This class handles the communication between the debugging client (IDE) and the Minecraft server,
- * allowing remote debugging of datapacks through a WebSocket connection.
+ * WebSocket endpoint carrying the Debug Adapter Protocol between the IDE and the Minecraft server.
+ * A single session is accepted at a time, and it only starts a [DapServer] once the player has approved it.
  *
  * @author theogiraudet
+ * @author Alumopper
  */
 class WebSocketServer : Endpoint() {
 
@@ -37,28 +37,27 @@ class WebSocketServer : Endpoint() {
         private val logger = LoggerFactory.getLogger("sniffer")
         private var server: Server? = null
 
-        /** Cap on messages buffered per session (mainly pre-auth, where nothing drains the queue). */
+        /** Cap on messages buffered per session, which matters before authentication, where nothing drains the queue. */
         private const val MAX_QUEUED_MESSAGES = 1024
 
         /**
-         * Launches the WebSocket server using the configured port.
+         * Launches the WebSocket server on the configured host and port.
          *
-         * @return An Optional containing the server if successfully launched, or empty if failed
+         * @return the running server, or empty if it could not be started
          */
         @JvmStatic
         fun launch(): Optional<Server> =
             launch(DebuggerConfig.getInstance().host, DebuggerConfig.getInstance().port)
 
         /**
-         * Launches the WebSocket server on the specified host and port.
+         * Launches the WebSocket server, replacing any server already running.
          *
-         * @param host The host interface to bind to (e.g. "localhost" or "0.0.0.0")
-         * @param port The port to run the server on
-         * @return An Optional containing the server if successfully launched, or empty if failed
+         * @param host the interface to bind to, such as `localhost` or `0.0.0.0`
+         * @param port the port to listen on
+         * @return the running server, or empty if it could not be started
          */
         @JvmStatic
         fun launch(host: String, port: Int): Optional<Server> {
-            // Properly stop any existing server
             server?.let {
                 try {
                     it.stop()
@@ -93,8 +92,7 @@ class WebSocketServer : Endpoint() {
         }
 
         /**
-         * Stops the WebSocket server gracefully.
-         * This method ensures all connections are closed properly before shutting down.
+         * Stops the WebSocket server, closing every open connection first.
          */
         @JvmStatic
         fun stopServer() {
@@ -114,8 +112,7 @@ class WebSocketServer : Endpoint() {
     private var dapServer: DapServer? = null
     private var launcher: Launcher<IDebugProtocolClient>? = null
 
-    // Bounded so an unauthenticated client cannot grow the heap while the in-game approval prompt is pending.
-    // Legitimate DAP clients only send a handful of small requests before the session is approved.
+    // Bounded so an unauthenticated client cannot grow the heap while the approval prompt is pending.
     private val messageQueue = LinkedBlockingQueue<ByteArray>(MAX_QUEUED_MESSAGES)
     private var currentSession: Session? = null
 
@@ -128,7 +125,7 @@ class WebSocketServer : Endpoint() {
         session.maxTextMessageBufferSize = 65536
         session.maxBinaryMessageBufferSize = 65536
 
-        // The mod supports a single DAP session: a second client would overwrite the event-bus listeners and reset the first one's state.
+        // Only one DAP session is supported: a second client would overwrite the listeners of the first one.
         if (ConnectionState.isConnected()) {
             reject(session, "another debugger is already attached")
             return
@@ -159,9 +156,8 @@ class WebSocketServer : Endpoint() {
             return
         }
 
-        // Singleplayer: the user param is optional (and, if present, may name the host).
-        // Default to the host player, who needs no op entry.
-        // Multiplayer: the user param is mandatory so we know which player to prompt.
+        // In singleplayer the user parameter is optional and defaults to the host player, who needs no op entry.
+        // In multiplayer it is mandatory, since it names the player to prompt.
         if (server.isSingleplayer) {
             val host = server.singleplayerProfile
             if (host == null) {
@@ -291,7 +287,7 @@ class WebSocketServer : Endpoint() {
     }
 
     /**
-     * Configuration class for the WebSocket server endpoint.
+     * Declares the endpoint and the path it is served on.
      */
     class WebSocketConfigurator : ServerApplicationConfig {
         override fun getEndpointConfigs(endpointClasses: Set<Class<out Endpoint>>): Set<ServerEndpointConfig> {

@@ -20,13 +20,14 @@ import java.util.Deque;
 import java.util.List;
 
 /**
- * Mixin on {@link ExecutionContext} that intercepts
- * {@code queueInitialFunctionCall} to route through {@link CallFunction}
- * instead of directly queuing via {@code ContinuationTask.schedule()}.
+ * Mixin on {@link ExecutionContext} rerouting {@code queueInitialFunctionCall} through {@link CallFunction},
+ * where vanilla queues the entries directly.
  *
- * <p>This ensures {@link CallFunctionMixin} fires for top-level function
- * calls (e.g. from {@code /function} or tick/load tags), which is necessary
- * for proper scope pushing.
+ * <p>A top level call, from {@code /function} or from a tick tag,
+ * then goes through {@link CallFunctionMixin} like any other call and gets its debug scope.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 @Mixin(ExecutionContext.class)
 public abstract class InitialFunctionCallMixin<T> implements ExecutionContextAccessor<T> {
@@ -94,9 +95,8 @@ public abstract class InitialFunctionCallMixin<T> implements ExecutionContextAcc
     }
 
     /**
-     * Suppress AutoCloseable.close() while the context is stashed by the
-     * debugger pause flow. The pause path keeps the context alive across
-     * server ticks; the resume path closes it once the queue drains.
+     * Keeps the context alive while it is stashed, since a pause spans several server ticks.
+     * The resume path closes it once its queue has drained.
      */
     @Inject(method = "close", at = @At("HEAD"), cancellable = true)
     private void sniffer$skipCloseWhileStashed(CallbackInfo ci) {
@@ -111,8 +111,6 @@ public abstract class InitialFunctionCallMixin<T> implements ExecutionContextAcc
             CommandResultCallback returnValueConsumer, CallbackInfo ci
     ) {
         Frame frame = createTopFrame(context, returnValueConsumer);
-        // Queue a CallFunction action instead of directly scheduling entries.
-        // This way, CallFunctionMixin fires and handles scope push + cleanup.
         context.queueNext(
             new CommandQueueEntry<>(frame, new CallFunction<>(procedure, source.callback(), false).bind(source))
         );

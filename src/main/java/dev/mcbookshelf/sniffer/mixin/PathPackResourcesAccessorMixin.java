@@ -9,8 +9,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import java.nio.file.Path;
 
 /**
- * Accessor-only mixin on {@link PathPackResources} — exposes the root
- * directory path for function-path resolution. No method overrides.
+ * Exposes the root directory of a {@link PathPackResources}, so a function can be traced back to it.
+ *
+ * @author theogiraudet
  */
 @Mixin(PathPackResources.class)
 public class PathPackResourcesAccessorMixin implements PathPackResourcesAccessor {

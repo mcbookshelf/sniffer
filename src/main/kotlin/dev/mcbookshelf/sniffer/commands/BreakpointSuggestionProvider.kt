@@ -9,10 +9,9 @@ import net.minecraft.commands.CommandSourceStack
 import java.util.concurrent.CompletableFuture
 
 /**
- * Provides command suggestions for breakpoint-related commands.
- * Suggests available variable names from the current debug scope
- * when using the breakpoint get command.
+ * Suggests the variables of the current debug scope, for `/breakpoint get`.
  *
+ * @author Alumopper
  * @author theogiraudet
  */
 object BreakpointSuggestionProvider : SuggestionProvider<CommandSourceStack> {

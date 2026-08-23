@@ -16,21 +16,20 @@ import net.minecraft.world.phys.Vec3
 import java.text.MessageFormat
 
 /**
- * Produces the lazy [VariableNode] trees a [DebugScope] exposes.
+ * Produces the lazy [VariableNode] trees a debug scope exposes.
  *
- * Everything is lazy past the root level: children lambdas close over the
- * live [Entity] / [CommandSourceStack] so they re-read state on every call.
- * Between-pause invalidation ([ScopeManager.refreshForPause]) drops those
- * cached children so the next DAP `variables` request rebuilds from current
- * entity position, rotation, etc.
+ * Past the root level nothing is built until it is asked for,
+ * and the lambdas close over the live [Entity] and [CommandSourceStack], so they read the game state of that moment.
+ * Dropping those cached children between two pauses is what keeps positions and rotations current.
  *
  * @author theogiraudet
+ * @author Alumopper
  */
 object VariableManager {
 
     /**
-     * Builds the ordered list of root-level variables for a debug scope.
-     * Each entry is already registered with [registry].
+     * Builds the root variables of a debug scope, the executor, the location and the macro arguments.
+     * Every returned node is already registered with [registry].
      */
     fun buildRootVariables(
         source: ExecutionCommandSource<*>,

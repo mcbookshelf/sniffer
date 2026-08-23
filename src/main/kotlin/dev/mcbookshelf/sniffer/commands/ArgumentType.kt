@@ -28,11 +28,10 @@ import net.minecraft.server.commands.data.EntityDataAccessor
 import net.minecraft.server.commands.data.StorageDataAccessor
 
 /**
- * Brigadier argument type that parses log expressions containing
- * plain text interleaved with `{ ... }` expression blocks.
+ * Argument type of the `#!log` command, parsing plain text interleaved with `{ ... }` expression blocks.
+ * The blocks are evaluated at runtime, so scores, data, names and arithmetic can be printed inline.
  *
- * Used by the `#!log` debug command to evaluate and display
- * runtime values (scores, data, names, arithmetic) inline.
+ * @author Alumopper
  */
 class LogArgumentType: ArgumentType<LogArgumentType.Companion.Log> {
     @Suppress("unused", "PrivatePropertyName")
@@ -44,10 +43,8 @@ class LogArgumentType: ArgumentType<LogArgumentType.Companion.Log> {
         val log = Log()
         while (reader.canRead()){
             if(reader.test('{')){
-                //an argument
                 log.logs.add(ExprArgumentType().parse(reader))
             }else {
-                //plain text
                 log.logs.add(PlainData(reader.readUntil('{')))
             }
         }
@@ -67,6 +64,11 @@ class LogArgumentType: ArgumentType<LogArgumentType.Companion.Log> {
     }
 }
 
+/**
+ * Argument type of a `{ ... }` block, the expression mini language of the debug commands.
+ *
+ * @author Alumopper
+ */
 class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
 
     override fun parse(reader: StringReader): Experiment {
@@ -77,9 +79,7 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         var op: String? = null
         val ops = ArrayList<Pair<String, DebugData?>>()
         while(reader.canRead() && !reader.test('}')){
-            //Testing whether the next argument is a value or a variable.
             if(reader.test('(')){
-                //is a parameter
                 val arg = parseArgument(reader)
                 if(first == null && ops.isEmpty()){
                     first = arg
@@ -90,18 +90,15 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
                     ops.add(op to arg)
                 }
             }else if(reader.test('{')){
-                //is another experiment
                 if(op == null){
                     throw MISSING_OP_ERROR.createWithContext(reader)
                 }
                 ops.add(op to parse(reader))
             }else {
-                //is an operation or a value
                 val isOp = reader.test { supportedOps.contains(reader.readWord()) }
                 if(isOp){
                     op = reader.readWord()
                 }else{
-                    //is a value
                     val arg = PlainData(NbtTagArgument.nbtTag().parse(reader))
                     if(first == null && ops.isEmpty()){
                         first = arg
@@ -128,13 +125,10 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
 
     fun parseArgumentWithoutBrackets(reader: StringReader): DebugData{
         val parsedData = if(reader.test("data")){
-            //is data
             DataArgumentType().parse(reader)
         }else if(reader.test("score")){
-            //is score
             ScoreArgumentType().parse(reader)
         }else if(reader.test("name")){
-            //is a name
             EntityNameType().parse(reader)
         }else {
             PlainData("")
@@ -376,6 +370,11 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
 
 }
 
+/**
+ * A value an expression can yield, resolved against the command source when it is evaluated.
+ *
+ * @author Alumopper
+ */
 interface DebugData {
     fun get(source: CommandSourceStack): Any
 
@@ -390,12 +389,22 @@ interface DebugData {
     }
 }
 
+/**
+ * A [DebugData] that already holds its value, such as a literal.
+ *
+ * @author Alumopper
+ */
 class PlainData(private val value: Any): DebugData {
     override fun get(source: CommandSourceStack): Any {
         return value
     }
 }
 
+/**
+ * Parses `name <selector>`, yielding the display name of the entity it matches.
+ *
+ * @author Alumopper
+ */
 class EntityNameType: ArgumentType<EntityNameType.Companion.Name>{
     override fun parse(reader: StringReader): Name {
         reader.skipWhitespace()
@@ -415,6 +424,11 @@ class EntityNameType: ArgumentType<EntityNameType.Companion.Name>{
     }
 }
 
+/**
+ * Parses `data <block|entity|storage> ...`, yielding the NBT it points at.
+ *
+ * @author Alumopper
+ */
 class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
 
     override fun parse(reader: StringReader): Data {
@@ -492,6 +506,11 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
     }
 }
 
+/**
+ * Parses `score <holder> <objective>`, yielding the value of that score.
+ *
+ * @author Alumopper
+ */
 class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
 
     @Suppress("unused", "PrivatePropertyName")
@@ -502,12 +521,10 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
     override fun parse(reader: StringReader): Score {
         skipWhitespace(reader)
         val keyword = reader.readUnquotedString()
-        //check keyword
         if("score" != keyword){
             throw ERROR.createWithContext(reader)
         }
         skipWhitespace(reader)
-        //read selector
         val scoreHolder = ScoreHolderArgument.scoreHolder().parse(reader)
         skipWhitespace(reader)
         val objective = ObjectiveArgument.objective().parse(reader)

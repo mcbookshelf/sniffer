@@ -8,8 +8,9 @@ import dev.mcbookshelf.sniffer.output.Ack
 import dev.mcbookshelf.sniffer.state.SteppingState
 
 /**
- * Clears stepping counters, resets the execution lock, and restores
- * the debug toggle — preserving breakpoints and scopes.
+ * Clears the stepping state and drops any paused execution, leaving breakpoints and scopes alone.
+ *
+ * @author theogiraudet
  */
 class ResetSteppingHandler : Handler<ResetSteppingInput> {
 

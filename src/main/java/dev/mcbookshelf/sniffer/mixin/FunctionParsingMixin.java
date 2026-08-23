@@ -20,15 +20,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Wraps {@link CommandFunction#fromLines} to add debugger features without
- * replacing the entire method:
- * <ul>
- *   <li>Saves raw source in {@link FunctionTextLoader}</li>
- *   <li>Transforms {@code #!} debug-command lines into real commands</li>
- *   <li>Collects {@code #@} debug tags</li>
- *   <li>Sets {@code sourceFunction} and {@code sourceLine} on each
- *       {@link BuildContexts.Unbound} entry via accessor</li>
- * </ul>
+ * Wraps {@link CommandFunction#fromLines} so that a function carries what the debugger needs.
+ * It keeps the raw source, rewrites the {@code #!} and {@code #@} directives into something vanilla accepts,
+ * and attaches the source location to every parsed entry.
+ *
+ * @author theogiraudet
+ * @author Alumopper
  */
 @Mixin(CommandFunction.class)
 public interface FunctionParsingMixin {
@@ -38,41 +35,32 @@ public interface FunctionParsingMixin {
             Identifier id, CommandDispatcher<T> dispatcher, T source, List<String> lines,
             Operation<CommandFunction<T>> original
     ) {
-        // 1. Save raw source for DAP source display
         FunctionTextLoader.put(id, lines);
 
-        // 2. Preprocess: transform #! into commands, #@ into comments
         ArrayList<String> preprocessed = new ArrayList<>(lines.size());
         ArrayList<String> debugTags = new ArrayList<>();
-        // Map from preprocessed-line-index -> original 0-indexed line number
+        // Index in the preprocessed lines to zero indexed line number in the original source.
         ArrayList<Integer> lineMapping = new ArrayList<>();
 
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             if (line.startsWith("#!")) {
-                // Debug command: strip prefix and turn into a real command
                 String debugCmd = line.substring(2).stripLeading();
                 preprocessed.add(debugCmd.isEmpty() ? "# empty debug command" : debugCmd);
             } else if (line.startsWith("#@")) {
-                // Debug tag: collect and replace with a comment so vanilla skips it
+                // Replaced by a comment so vanilla skips the line it was on.
                 String tag = line.substring(2).stripLeading().split("\\s+")[0];
                 if (!tag.isEmpty()) debugTags.add(tag);
                 preprocessed.add("# debug tag");
             } else {
-                preprocessed.add(lines.get(i)); // keep original (untrimmed) for vanilla
+                preprocessed.add(lines.get(i)); // Untrimmed, as vanilla expects it.
             }
         }
 
-        // 3. Build the line-number mapping before calling vanilla
         buildLineMapping(preprocessed, lineMapping);
-
-        // 4. Call vanilla parsing with preprocessed lines
         CommandFunction<T> result = original.call(id, dispatcher, source, preprocessed);
-
-        // 5. Post-process: set source info on each Unbound entry
         setSourceInfo(result, id.toString(), lineMapping);
 
-        // 6. Store debug tags
         if (!debugTags.isEmpty()) {
             CommandFunctionUniqueAccessors.of(result).setDebugTags(debugTags);
         }
@@ -81,15 +69,17 @@ public interface FunctionParsingMixin {
     }
 
     /**
-     * Builds a mapping from entry index to original 0-indexed line number by
-     * replicating the line-classification logic of {@code fromLines}.
+     * Maps the index of a parsed entry to the line it came from, by replaying how {@code fromLines} classifies lines.
+     *
+     * @param lines the preprocessed lines about to be handed to vanilla
+     * @param mapping filled with one zero indexed line number per entry vanilla will produce
      */
     private static void buildLineMapping(List<String> lines, ArrayList<Integer> mapping) {
         int i = 0;
         while (i < lines.size()) {
             String trimmed = lines.get(i).trim();
 
-            // Handle line continuation: skip continuation lines
+            // A line ending with a backslash swallows the ones after it, and reports as the line it started on.
             if (endsWithBackslash(trimmed)) {
                 StringBuilder sb = new StringBuilder(trimmed);
                 int startLine = i;
@@ -99,7 +89,6 @@ public interface FunctionParsingMixin {
                     sb.append(lines.get(i).trim());
                 }
                 String merged = sb.toString();
-                // If this merged line is a command, use the start line
                 if (!merged.isEmpty() && !merged.startsWith("#")) {
                     mapping.add(startLine);
                 }
@@ -111,7 +100,7 @@ public interface FunctionParsingMixin {
                 i++;
                 continue;
             }
-            // $-prefixed = macro, non-$ = command — both produce entries
+            // Macro lines and plain command lines both produce exactly one entry.
             mapping.add(i);
             i++;
         }
@@ -121,10 +110,7 @@ public interface FunctionParsingMixin {
         return s.length() > 0 && s.charAt(s.length() - 1) == '\\';
     }
 
-    /**
-     * Sets {@code sourceFunction} and {@code sourceLine} on each entry in the
-     * parsed function. Only sets on {@link BuildContexts.Unbound} entries.
-     */
+    /** Attaches the source location to every {@link BuildContexts.Unbound} entry of the parsed function. */
     @SuppressWarnings("unchecked")
     private static <T> void setSourceInfo(CommandFunction<T> function, String functionId, List<Integer> lineMapping) {
         if (function instanceof PlainTextFunction<T> plainText) {
@@ -133,9 +119,7 @@ public interface FunctionParsingMixin {
                 setEntrySourceInfo(entries.get(i), functionId, i < lineMapping.size() ? lineMapping.get(i) : -1);
             }
         }
-        // MacroFunction entries are instantiated at runtime — store the line
-        // mapping so MacroInstantiationMixin can set source info on each
-        // instantiated entry when the macro is called.
+        // Macro entries only exist once the macro is called, so the mapping is stored for MacroInstantiationMixin.
         if (function instanceof MacroFunction<?> macroFunc) {
             MacroFunctionUniqueAccessor.of(macroFunc).setLineMapping(lineMapping);
         }

@@ -10,8 +10,9 @@ import java.io.File
 import java.util.concurrent.CompletableFuture
 
 /**
- * Suggests datapack directory names for command tab-completion
- * by listing subdirectories of the world's datapack folder.
+ * Suggests the datapacks of the world, by listing the subdirectories of its datapack folder.
+ *
+ * @author Alumopper
  */
 object DatapackIDSuggestionProvider: SuggestionProvider<CommandSourceStack> {
     override fun getSuggestions(

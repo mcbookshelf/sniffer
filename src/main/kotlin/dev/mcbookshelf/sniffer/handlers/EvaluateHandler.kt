@@ -13,14 +13,12 @@ import net.minecraft.commands.CommandSourceStack
 import net.minecraft.nbt.CompoundTag
 
 /**
- * Evaluates a debug expression in the current scope.
+ * Evaluates a debug expression against the executor of the current scope.
  *
- * Parses the expression via [VariableManager.evaluate], resolves it against
- * the current scope's executor, and — if the result is a [CompoundTag] —
- * registers a new [dev.mcbookshelf.sniffer.state.VariableNode] subtree with
- * the shared registry so that subsequent [ResolveVariablesHandler] calls can
- * expand it. The [EvaluationSession] tracks the root id per expression so a
- * repeat evaluation drops the previous subtree first.
+ * A [CompoundTag] result is registered as a variable subtree, so the client can expand it afterwards.
+ * The [EvaluationSession] remembers that subtree, and evaluating the same expression again drops it first.
+ *
+ * @author theogiraudet
  */
 class EvaluateHandler(
     private val scopeManager: ScopeManager,

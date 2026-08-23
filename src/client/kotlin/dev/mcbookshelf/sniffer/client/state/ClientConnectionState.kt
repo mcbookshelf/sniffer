@@ -1,10 +1,9 @@
 package dev.mcbookshelf.sniffer.client.state
 
 /**
- * Client-local mirror of the server's DAP connection flag, synced via
- * [dev.mcbookshelf.sniffer.network.SetDapConnectedPayload]. Read by the HUD
- * overlay each frame to pick between the "connected" and "disconnected"
- * status icons.
+ * Local mirror of whether a DAP client is attached, which the HUD reads each frame to pick its status icon.
+ *
+ * @author theogiraudet
  */
 object ClientConnectionState {
 

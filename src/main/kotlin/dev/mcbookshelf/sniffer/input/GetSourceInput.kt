@@ -3,8 +3,9 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.IInput
 
 /**
- * Retrieve the source text of a function by its Minecraft identifier.
+ * Retrieves the source text of a function.
  *
- * @property functionId the Minecraft identifier string (e.g. "namespace:path").
+ * @property functionId location of the function, as `namespace:path`
+ * @author theogiraudet
  */
 data class GetSourceInput(val functionId: String) : IInput

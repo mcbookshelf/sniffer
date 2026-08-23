@@ -4,13 +4,12 @@ import org.slf4j.LoggerFactory
 import java.util.function.BiConsumer
 
 /**
- * Typed event bus for debugger execution-state transitions.
+ * Carries the execution state transitions of the debugger to the DAP layer, which is what registers the listeners.
  *
- * Listeners are registered by the DAP layer ([dev.mcbookshelf.sniffer.dap.DapServer])
- * and fired by handlers/state objects when the debugger stops, continues, or shuts down.
+ * Each event holds a single listener and a new registration overwrites the previous one,
+ * so a reconnecting client replaces the listeners of the connection it lost.
  *
- * Uses a single-listener model: each registration overwrites the previous one,
- * so reconnecting a DAP client naturally replaces stale listeners from the old connection.
+ * @author theogiraudet
  */
 object DebugEventBus {
 

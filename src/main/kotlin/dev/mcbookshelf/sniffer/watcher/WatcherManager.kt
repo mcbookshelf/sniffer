@@ -14,9 +14,9 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.extension
 
 /**
- * Manages filesystem watchers that monitor datapack directories for
- * `.mcfunction` file changes and dispatch events to [WatchCommand]
- * for hot-reload processing.
+ * Owns the filesystem watchers, one per datapack, that report `.mcfunction` changes to the hot reload.
+ *
+ * @author Alumopper
  */
 object WatcherManager {
     private val LOGGER = LogUtils.getLogger()

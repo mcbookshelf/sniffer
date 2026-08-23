@@ -9,8 +9,12 @@ import org.spongepowered.asm.mixin.Unique;
 import java.util.ArrayList;
 
 /**
- * Adds the {@code debugTags} field (populated from {@code #@} directives by {@link FunctionParsingMixin}) to both concrete {@code CommandFunction} implementations.
- * Without this, the {@code CommandFunctionUniqueAccessors} cast fails with a {@link ClassCastException}.
+ * Adds the {@code debugTags} field, which {@link FunctionParsingMixin} fills from the {@code #@} directives,
+ * to both implementations of {@code CommandFunction}.
+ * Without it the accessor cast fails with a {@link ClassCastException}.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 @Mixin({PlainTextFunction.class, MacroFunction.class})
 public class CommandFunctionMixin implements CommandFunctionUniqueAccessors {

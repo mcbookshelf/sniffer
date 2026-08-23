@@ -9,11 +9,10 @@ import dev.mcbookshelf.sniffer.output.SetBreakpointsOutput
 import dev.mcbookshelf.sniffer.state.BreakpointManager
 
 /**
- * Replaces all breakpoints for a file with the requested set.
+ * Replaces the breakpoints of a file with the requested ones.
+ * The result says which lines could be mapped to a function, so the client can mark the others as unverified.
  *
- * Clears existing breakpoints for the file, then registers each requested
- * line. Returns verification results so the entrypoint can report which
- * breakpoints were successfully resolved to a Minecraft function path.
+ * @author theogiraudet
  */
 class SetBreakpointsHandler(
     private val breakpointManager: BreakpointManager,

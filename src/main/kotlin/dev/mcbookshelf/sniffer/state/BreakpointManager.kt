@@ -8,11 +8,9 @@ import java.util.Optional
 import java.util.regex.Pattern
 
 /**
- * Owns all breakpoint storage, path resolution, and breakpoint-hit queries.
+ * Owns breakpoint storage, path resolution and the "should execution pause here" query.
  *
- * This is the single source of truth for "should execution pause at this
- * location?" — combining breakpoint bookkeeping with the duplicate-hit
- * guard that prevents re-triggering at the same position.
+ * @author theogiraudet
  */
 object BreakpointManager {
 
@@ -40,11 +38,9 @@ object BreakpointManager {
     private val scopeManager: ScopeManager get() = ScopeManager.get()
 
     /**
-     * Normalizes a filesystem path to a canonical string for consistent map lookups.
-     *
-     * Uses [java.nio.file.Path.toRealPath] to canonicalize drive-letter case on
-     * Windows (VSCode sends `e:\...` while Minecraft's Path API yields `E:\...`).
-     * Falls back to plain absolute-normalize if the file cannot be resolved.
+     * Canonicalizes a filesystem path so every lookup agrees on it.
+     * [java.nio.file.Path.toRealPath] is what fixes the drive letter case on Windows,
+     * where VSCode sends `e:\...` and the Minecraft path API yields `E:\...`.
      */
     private fun normalizePath(filePath: String): String {
         val p = Paths.get(filePath)
@@ -55,14 +51,10 @@ object BreakpointManager {
         }
     }
 
-    // ── Breakpoint-hit query ────────────────────────────────────────
-
     /**
      * Whether execution should stop at [mcpath]:[line].
-     *
-     * A stop is triggered when a breakpoint exists at this position AND
-     * the debugger isn't already paused at this exact position (to avoid
-     * re-triggering on the same line after a step).
+     * A breakpoint has to be set there and the debugger must not already be paused on it,
+     * which is what keeps a step onto a breakpoint line from triggering it twice.
      */
     @JvmStatic
     fun mustStop(mcpath: String?, line: Int): Boolean =
@@ -74,13 +66,10 @@ object BreakpointManager {
         return file == functionName && line == functionLine
     }
 
-    // ── Registration ────────────────────────────────────────────────
-
     /**
      * Registers a breakpoint at [line] in the file at [filePath].
      *
-     * @return the new breakpoint's unique ID, or empty if the file could
-     *   not be resolved to a Minecraft function path.
+     * @return the unique id of the new breakpoint, or empty if the file is not a Minecraft function
      */
     @JvmStatic
     fun addBreakpoint(filePath: String?, line: Int): Optional<Int> {
@@ -139,7 +128,7 @@ object BreakpointManager {
         nextId = 0
     }
 
-    /** Converts a filesystem path to a `namespace:path` MC-path, or `null`. */
+    /** Converts a filesystem path to a `namespace:path` function location, or `null` if it is not one. */
     @JvmStatic
     fun fileToMcPath(path: String?): String? {
         if (path == null) return null

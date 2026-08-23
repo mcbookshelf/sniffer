@@ -7,11 +7,10 @@ import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 
 /**
- * Clientbound payload that pushes a player's debug-mode state to their client.
+ * Pushes the debug mode of a player to their own client, which keeps a copy the HUD can read every frame.
  *
- * Debug mode is a per-user, HUD-only toggle (see [dev.mcbookshelf.sniffer.state.DebugModeState]);
- * the server is the source of truth for persistence across reconnects, but the
- * client keeps its own local copy so the HUD can read it cheaply each frame.
+ * @property enabled whether that player has the overlay on
+ * @author theogiraudet
  */
 @JvmRecord
 data class SetDebugModePayload(val enabled: Boolean) : CustomPacketPayload {

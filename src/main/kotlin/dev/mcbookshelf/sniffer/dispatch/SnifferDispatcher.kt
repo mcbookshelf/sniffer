@@ -3,27 +3,23 @@ package dev.mcbookshelf.sniffer.dispatch
 import dev.mcbookshelf.sniffer.handlers.buildHandlers
 
 /**
- * Process-wide holder for the single [Dispatcher] instance.
+ * Process wide holder of the single [Dispatcher], and how the entrypoints reach it.
+ * Splitting [init] from [get] keeps the initialisation point explicit instead of hiding it behind a lazy.
  *
- * Java entrypoints reach the dispatcher through this object. The [init]/[get]
- * split keeps the init point explicit rather than hiding it behind a lazy.
- *
- * Usage:
- *  - call [init] exactly once, on `SERVER_STARTED`, after services are ready.
- *  - call [get] from entrypoints to obtain the dispatcher for `dispatch(...)`.
+ * @author theogiraudet
  */
 object SnifferDispatcher {
 
     private var instance: Dispatcher? = null
 
-    /** Build the dispatcher with all wired handlers. Safe to call more than once. */
+    /** Builds the dispatcher and its handlers, on `SERVER_STARTED`. Safe to call more than once. */
     @JvmStatic
     fun init() {
         instance = Dispatcher(buildHandlers())
     }
 
-    /** @throws IllegalStateException if [init] has not been called. */
+    /** @throws IllegalStateException if [init] has not been called yet */
     @JvmStatic
     fun get(): Dispatcher =
-        instance ?: error("SnifferDispatcher not initialized — call init() on SERVER_STARTED first")
+        instance ?: error("SnifferDispatcher not initialized, call init() on SERVER_STARTED first")
 }

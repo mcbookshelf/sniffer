@@ -21,17 +21,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.List;
 
 /**
- * Captures macro arguments when a {@link MacroFunction} is instantiated and
- * stores them in {@link MacroArgsStore} — an external map keyed by the
- * resulting {@link InstantiatedFunction} instance.
+ * Captures the arguments a {@link MacroFunction} is instantiated with into {@link MacroArgsStore},
+ * keyed by the resulting {@link InstantiatedFunction}.
  *
- * <p>Also sets source-location info ({@code sourceFunction}, {@code sourceLine})
- * on each entry of the instantiated function, enabling breakpoints and stepping
- * inside macro functions. The line mapping is stored during function parsing
- * (via {@link MacroFunctionUniqueAccessor}) and applied here at instantiation time.
+ * <p>It also attaches the source location to every entry of that function,
+ * which is what makes breakpoints and stepping work inside a macro.
+ * The line mapping it needs was computed during parsing and left on the macro.
  *
- * <p>The {@link MacroArgsStore} uses a {@code WeakHashMap}, so entries are
- * garbage-collected when the function instance is evicted from the macro LRU cache.
+ * @author Alumopper
+ * @author theogiraudet
  */
 @Mixin(MacroFunction.class)
 public class MacroInstantiationMixin<T extends ExecutionCommandSource<T>> implements MacroFunctionUniqueAccessor {
@@ -52,12 +50,6 @@ public class MacroInstantiationMixin<T extends ExecutionCommandSource<T>> implem
         this.lineMapping = lineMapping;
     }
 
-    /**
-     * After {@code MacroFunction.instantiate()} returns an
-     * {@link InstantiatedFunction}, associate the original macro
-     * arguments with it in the external store and set source info
-     * on each entry for debugger support.
-     */
     @Inject(method = "instantiate", at = @At("RETURN"))
     private void captureArgs(
             CompoundTag arguments, CommandDispatcher<T> dispatcher,
@@ -68,8 +60,6 @@ public class MacroInstantiationMixin<T extends ExecutionCommandSource<T>> implem
 
         MacroArgsStore.put(returnValue, arguments);
 
-        // Set source info on instantiated entries so breakpoints and
-        // stepping work inside macro functions
         if (lineMapping == null) return;
         var entries = returnValue.entries();
         String functionId = id.toString();

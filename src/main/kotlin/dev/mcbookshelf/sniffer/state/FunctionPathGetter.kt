@@ -13,11 +13,8 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
 /**
- * Resource reload listener that resolves the physical filesystem paths of
- * all loaded `.mcfunction` files after a datapack reload.
- *
- * Iterates the loaded resources after reload and uses accessor interfaces
- * to get pack root paths.
+ * Fills [FunctionPathRegistry] after every datapack reload,
+ * by walking the loaded resources and asking each pack where its root is.
  *
  * @author theogiraudet
  */

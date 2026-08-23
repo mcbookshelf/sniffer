@@ -2,6 +2,11 @@ package dev.mcbookshelf.sniffer
 
 import net.minecraft.resources.Identifier
 
+/**
+ * Identifiers of the payloads exchanged between the server and its clients.
+ *
+ * @author theogiraudet
+ */
 object Constants {
 
     @JvmField

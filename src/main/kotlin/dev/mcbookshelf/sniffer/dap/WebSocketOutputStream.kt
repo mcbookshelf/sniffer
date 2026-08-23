@@ -7,13 +7,8 @@ import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 
 /**
- * Adapts an OutputStream to send data through WebSocket.
- * This class provides a bridge between the Java stream-based API and
- * the WebSocket message-based API by buffering written data
- * and then sending it as a WebSocket message when flushed.
- *
- * Data is accumulated in an internal buffer until flush() is called,
- * at which point it is converted to a string and sent as a WebSocket text message.
+ * Bridges the stream API the DAP launcher writes to and the message API of a WebSocket.
+ * Written bytes pile up in a buffer, and a flush turns them into a single text message.
  *
  * @author theogiraudet
  */

@@ -1,14 +1,15 @@
 package dev.mcbookshelf.sniffer.state
 
 /**
- * Represents the different types of debugging steps supported by the Datapack Debugger.
- * This enum defines the behavior of the debugger when stepping through code.
+ * The stepping policies the debugger supports.
+ *
+ * @author theogiraudet
  */
 enum class StepType {
-    /** Step into — follows function calls. */
+    /** Follows the called functions. */
     STEP_IN,
-    /** Step over — treats function calls as single steps. */
+    /** Runs each called function as a single step. */
     STEP_OVER,
-    /** Step out — continues until the current function returns. */
+    /** Continues until the running function returns. */
     STEP_OUT
 }

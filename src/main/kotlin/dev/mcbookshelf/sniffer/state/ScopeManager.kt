@@ -5,13 +5,12 @@ import net.minecraft.nbt.CompoundTag
 import java.util.Optional
 
 /**
- * Owns the debug scope stack (call hierarchy) and routes variable lookups
- * through the unified [VariableRegistry].
+ * Owns the stack of debug scopes, which is the call hierarchy, and routes variable lookups to [VariableRegistry].
  *
- * Each [DebugScope] is itself registered as a [VariableNode] in the registry,
- * so the same `variables/{reference}` request resolves both scope-roots and
- * nested variables without any ID-range branching.
+ * A [DebugScope] is itself registered as a [VariableNode],
+ * so one `variables` request resolves scope roots and nested variables alike.
  *
+ * @author Alumopper
  * @author theogiraudet
  */
 class ScopeManager private constructor() {
@@ -19,10 +18,13 @@ class ScopeManager private constructor() {
     val registry: VariableRegistry = VariableRegistry()
 
     /**
-     * Represents a debug scope during execution. The scope owns a root
-     * [VariableNode] in [ScopeManager.registry]; that node's children are
-     * the root variables (executor, location, macro) built lazily by
-     * [VariableManager.buildRootVariables].
+     * One entry of the call hierarchy, holding the function being run and the state to inspect it.
+     * Its [VariableNode] has the executor, the location and the macro arguments as lazily built children.
+     *
+     * @param parent the scope that called this one, `null` at the bottom of the stack
+     * @param function the `namespace:path` of the running function
+     * @param executor the source the function runs as
+     * @param macroVariables the arguments the function was instantiated with, `null` when it is not a macro
      */
     class DebugScope internal constructor(
         private val parent: DebugScope?,
@@ -59,9 +61,7 @@ class ScopeManager private constructor() {
     private val scopesById = HashMap<Int, DebugScope>()
     private var _currentScope: DebugScope? = null
 
-    /**
-     * The currently active scope, wrapped in an Optional for Java interop.
-     */
+    /** The scope on top of the stack, as an [Optional] for Java interop. */
     val currentScope: Optional<DebugScope>
         get() = Optional.ofNullable(_currentScope)
 
@@ -80,7 +80,7 @@ class ScopeManager private constructor() {
         scopesById.remove(top.id)
         _currentScope = stack.lastOrNull()
         if (stack.isEmpty()) {
-            // Execution finished — clear debugging state so the HUD icon disappears
+            // Execution is over, so the HUD icon has to go away.
             SteppingState.setDebugging(false)
         }
     }
@@ -99,9 +99,7 @@ class ScopeManager private constructor() {
     fun getScope(id: Int): Optional<DebugScope> = Optional.ofNullable(scopesById[id])
 
     /**
-     * Returns the children of the node referenced by [id] — either a scope's
-     * root variables or a nested variable's children. Empty optional if [id]
-     * is unknown.
+     * @return the children of the node [id] refers to, empty if that node is unknown
      */
     fun getVariables(id: Int): Optional<List<VariableNode>> {
         val node = registry.get(id) ?: return Optional.empty()
@@ -109,9 +107,8 @@ class ScopeManager private constructor() {
     }
 
     /**
-     * Drops memoized variable subtrees for every live scope so the next
-     * DAP `variables` request rebuilds from current engine state. Called
-     * by [UnboundDebugMixin] immediately before a pause.
+     * Drops the memoized variables of every live scope, so the next `variables` request reads the current game state.
+     * Called right before a pause.
      */
     fun refreshForPause() {
         for (scope in stack) scope.invalidate()

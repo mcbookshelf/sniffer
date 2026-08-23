@@ -8,10 +8,10 @@ import dev.mcbookshelf.sniffer.output.VariableOutput
 import dev.mcbookshelf.sniffer.input.GetVariableInput
 
 /**
- * Retrieves a single variable by key from the current debug scope.
+ * Retrieves one macro argument of the current scope by name.
+ * The returned value is empty when there is no scope, no macro, or no argument under that name.
  *
- * Returns a [VariableOutput] with the variable value. If no scope
- * is active, returns a [VariableOutput] with null value.
+ * @author theogiraudet
  */
 class GetVariableHandler : Handler<GetVariableInput> {
 

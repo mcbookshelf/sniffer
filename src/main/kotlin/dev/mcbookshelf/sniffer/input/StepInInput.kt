@@ -3,9 +3,9 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.StepInput
 
 /**
- * Advance the paused thread by [lines] commands, descending into nested
- * function calls.
+ * Advances by [lines] commands, entering the functions called along the way.
  *
- * @property lines number of commands to step; must be >= 1. Defaults to 1.
+ * @property lines how many commands to run, at least one
+ * @author theogiraudet
  */
 data class StepInInput(override val lines: Int = 1) : StepInput

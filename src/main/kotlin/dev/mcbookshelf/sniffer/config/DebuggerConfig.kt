@@ -9,8 +9,8 @@ import java.io.FileWriter
 import java.io.IOException
 
 /**
- * Configuration class for the Sniffer mod.
- * Handles loading and saving configuration settings.
+ * Settings of the mod, persisted to `config/sniffer.json`.
+ * Every property saves the file as it is written.
  *
  * @author theogiraudet
  */

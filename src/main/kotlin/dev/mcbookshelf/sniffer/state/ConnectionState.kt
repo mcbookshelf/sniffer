@@ -6,14 +6,13 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 
 /**
- * Server-side authoritative flag for whether a DAP client is currently
- * attached to the WebSocket server. The HUD overlay lives in the client
- * process and cannot read this directly on a dedicated server, so every
- * change broadcasts a [SetDapConnectedPayload] to all online players; the
- * client mirror is [dev.mcbookshelf.sniffer.client.state.ClientConnectionState].
+ * Whether a DAP client is attached, as the server sees it.
  *
- * Mutated from the Tyrus IO / server thread when sessions open, close, or
- * finish the auth handshake.
+ * The HUD overlay runs in the client process and cannot read this on a dedicated server,
+ * so every change is broadcast as a [SetDapConnectedPayload].
+ * Mutated from the Tyrus and server threads, when a session opens, closes or finishes its handshake.
+ *
+ * @author theogiraudet
  */
 object ConnectionState {
 
@@ -30,11 +29,7 @@ object ConnectionState {
         broadcast(SetDapConnectedPayload(value))
     }
 
-    /**
-     * Send a HUD-state payload to every currently online player.
-     * Shared by sibling state holders (e.g. [SteppingState]) that need the
-     * same broadcast semantics.
-     */
+    /** Sends a HUD payload to every online player, for any state holder needing it. */
     @JvmStatic
     fun broadcast(payload: CustomPacketPayload) {
         val server = runCatching { ServerReference.get() }.getOrNull() ?: return
@@ -42,7 +37,7 @@ object ConnectionState {
             try {
                 ServerPlayNetworking.send(player, payload)
             } catch (_: Exception) {
-                // Best-effort: a player may be mid-disconnect.
+                // A player may be in the middle of a disconnect.
             }
         }
     }

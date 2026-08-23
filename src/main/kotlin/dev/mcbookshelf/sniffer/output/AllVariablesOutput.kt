@@ -4,11 +4,11 @@ import dev.mcbookshelf.sniffer.dispatch.Output
 import net.minecraft.nbt.Tag
 
 /**
- * Result of an all-variables lookup.
+ * Result of a lookup of every variable at once.
  *
- * @property value compound NBT containing all variables, or `null` if no
- *   execution context is available.
- * @property error if non-null, an error occurred during retrieval.
+ * @property value a compound holding them all, `null` when no execution is in progress
+ * @property error what went wrong, `null` when nothing did
+ * @author theogiraudet
  */
 data class AllVariablesOutput(
     val value: Tag? = null,

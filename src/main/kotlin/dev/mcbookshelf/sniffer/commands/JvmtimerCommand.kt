@@ -16,9 +16,10 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Registers the `/jvmtimer` command for JVM-level profiling of
- * datapack functions. Supports start, end, reset, info, and disable
- * subcommands, each operating on named timer instances.
+ * The `/jvmtimer` command, which times datapack functions from the JVM side.
+ * Its subcommands all work on named timers.
+ *
+ * @author Alumopper
  */
 object JvmtimerCommand {
 
