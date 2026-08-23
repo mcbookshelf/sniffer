@@ -3,10 +3,11 @@ package dev.mcbookshelf.sniffer.output
 import dev.mcbookshelf.sniffer.dispatch.Output
 
 /**
- * Result of a source text retrieval.
+ * Result of a source text request.
  *
- * @property content the full source text of the function.
- * @property mimeType the MIME type of the content.
+ * @property content the whole source text of the function
+ * @property mimeType the MIME type the client should read it as
+ * @author theogiraudet
  */
 data class SourceOutput(
     val content: String,

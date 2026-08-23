@@ -11,14 +11,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Mixin on {@link Frame} to:
- * <ul>
- *   <li>Store which {@link InstantiatedFunction} this frame is executing
- *       (needed for call-stack tracking and source-location lookups)</li>
- *   <li>Pop the debug scope when the frame is discarded by {@code /return}
- *       (the normal-completion scope pop is handled by the cleanup entry
- *       queued in {@link CallFunctionMixin})</li>
- * </ul>
+ * Mixin on {@link Frame} recording which {@link InstantiatedFunction} the frame runs, for the call stack.
+ * It also pops the debug scope when {@code /return} discards the frame,
+ * the case the cleanup entry queued by {@link CallFunctionMixin} cannot cover.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 @Mixin(Frame.class)
 public class FrameMixin implements FrameUniqueAccessor {
@@ -43,10 +41,9 @@ public class FrameMixin implements FrameUniqueAccessor {
     /**
      * Pops the debug scope pushed for this frame, at most once.
      *
-     * <p>Only frames created by {@code CallFunction} carry a {@code function} reference and had a scope pushed for them;
-     * other frames (e.g. the depth-0 frame of a top-level {@code /return run}) must not pop:
-     * doing so would corrupt the scope stack of a concurrently paused session.
-     * Vanilla can also discard the same frame more than once ({@code /return run function} plus its fallthrough), hence the {@code scopePopped} guard.
+     * <p>Only frames created by {@code CallFunction} carry a function and had a scope pushed for them.
+     * Any other frame, such as the one of a top level {@code /return run}, must leave the stack alone.
+     * The {@code scopePopped} guard is there because vanilla can discard the same frame twice.
      */
     @Override
     public void popScopeOnce() {
@@ -55,12 +52,7 @@ public class FrameMixin implements FrameUniqueAccessor {
         ScopeManager.Companion.get().unscope();
     }
 
-    /**
-     * Pops the debug scope when the frame is discarded.
-     * Handles the {@code /return} case — when a function returns early,
-     * {@code frame.discard()} removes remaining queue entries (including the
-     * cleanup entry from {@link CallFunctionMixin}), so we pop scope here.
-     */
+    /** Covers the early return, where discarding the frame also drops the cleanup entry that would have popped. */
     @Inject(method = "discard", at = @At("HEAD"))
     private void beforeDiscard(CallbackInfo ci) {
         popScopeOnce();

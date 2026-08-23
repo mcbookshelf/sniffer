@@ -4,23 +4,18 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Single owner of every [VariableNode] the DAP client can reference.
+ * Owns every [VariableNode] the DAP client can reference, scope variables and evaluated ones alike,
+ * in a single id space.
+ * A node is registered through a factory receiving the id just allocated, so the node can hold it.
  *
- * Both scope-owned variables and expression-evaluation variables live here,
- * in one monotonic ID space. Nodes are registered with a factory that
- * receives the freshly allocated ID so the node can embed it.
- *
- * The registry is instance-based (one per server lifetime) but is reached
- * statically through [ScopeManager.get].registry so mixins don't need DI.
+ * @author theogiraudet
  */
 class VariableRegistry {
 
     private val nodes = ConcurrentHashMap<Int, VariableNode>()
     private val nextId = AtomicInteger(1)
 
-    /**
-     * Allocates the next ID, builds the node with [factory], stores and returns it.
-     */
+    /** Allocates the next id, builds the node with [factory], then stores and returns it. */
     fun register(factory: (Int) -> VariableNode): VariableNode {
         val id = nextId.getAndIncrement()
         val node = factory(id)

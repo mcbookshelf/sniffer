@@ -1,16 +1,11 @@
 package dev.mcbookshelf.sniffer.state
 
 /**
- * Client-local mirror of this player's debug-mode state.
+ * Local mirror of the debug mode of this player, which the HUD overlay reads to pick its icons.
+ * [DebugModeState] holds the truth and this value is refreshed from the payload it broadcasts.
+ * On a dedicated server nothing reads it.
  *
- * Debug mode is HUD-only — it never gates breakpoint firing or any other
- * debugging capability. The server is the source of truth
- * ([DebugModeState]); this singleton is updated whenever the client receives
- * a [dev.mcbookshelf.sniffer.network.SetDebugModePayload]. The HUD overlay reads
- * it to decide what icons to draw.
- *
- * On a dedicated server this singleton holds no meaningful state — the field
- * is only consulted from client-side code.
+ * @author theogiraudet
  */
 object DebugToggles {
 

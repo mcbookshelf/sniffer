@@ -5,8 +5,9 @@ import dev.mcbookshelf.sniffer.dispatch.Output
 /**
  * Result of evaluating a debug expression.
  *
- * @property result the string representation of the evaluated value, or the error message.
- * @property variablesReference reference ID for expanding compound results (0 if not expandable).
+ * @property result the evaluated value as a string, or the message of the error that stopped it
+ * @property variablesReference id to expand a compound result with, `0` when the result is a leaf
+ * @author theogiraudet
  */
 data class EvaluateOutput(
     val result: String,

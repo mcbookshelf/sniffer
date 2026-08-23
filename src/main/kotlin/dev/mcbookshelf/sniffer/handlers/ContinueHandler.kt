@@ -11,11 +11,10 @@ import dev.mcbookshelf.sniffer.state.SteppingState
 import net.minecraft.network.chat.Component
 
 /**
- * Resumes execution from the current pause point until the next breakpoint.
+ * Resumes execution until the next breakpoint.
+ * It clears the stepping state, tells the DAP client, and has the suspended execution replayed on the next tick.
  *
- * Clears stepping state, notifies DAP clients via [DebugEventBus], and
- * asks [PausedExecutionStore] to replay the suspended execution on the
- * next server tick.
+ * @author theogiraudet
  */
 class ContinueHandler : Handler<ContinueInput> {
 

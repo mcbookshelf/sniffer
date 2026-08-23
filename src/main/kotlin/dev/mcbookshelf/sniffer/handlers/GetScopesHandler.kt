@@ -9,10 +9,10 @@ import dev.mcbookshelf.sniffer.output.ScopeData
 import dev.mcbookshelf.sniffer.output.ScopesOutput
 
 /**
- * Returns the variable scopes for a given stack frame.
+ * Returns the variable scopes of a stack frame.
+ * Every frame exposes a single `Function` scope, holding the command source variables and the macro arguments.
  *
- * Currently every frame exposes a single "Function" scope containing
- * the command source variables and macro arguments (if any).
+ * @author theogiraudet
  */
 class GetScopesHandler(
     private val scopeManager: ScopeManager,

@@ -12,16 +12,14 @@ import dev.mcbookshelf.sniffer.state.SteppingState
 import net.minecraft.network.chat.Component
 
 /**
- * Base handler for all step actions (step-in, step-over, step-out).
+ * Base handler of the three step actions.
  *
- * Each concrete subclass declares its [inputType] and stepping [policy].
- * The handler sets [SteppingState] fields and asks
- * [PausedExecutionStore] to replay the suspended execution on the next
- * server tick. The mixin ([dev.mcbookshelf.sniffer.mixin.UnboundDebugMixin])
- * reads the stepping fields to decide when to re-pause.
+ * It writes the [SteppingState] fields and asks for the suspended execution to be replayed on the next tick.
+ * `UnboundDebugMixin` then reads those fields to decide where to pause again.
  *
- * @param I the concrete [StepInput] subtype this handler routes.
- * @property policy the [StepType] applied when this handler runs.
+ * @param I the concrete [StepInput] subtype this handler routes
+ * @property policy the [StepType] applied when this handler runs
+ * @author theogiraudet
  */
 abstract class StepHandler<I : StepInput>(
     private val policy: StepType,

@@ -8,8 +8,9 @@ import net.minecraft.server.permissions.Permissions
 import net.minecraft.network.chat.Component
 
 /**
- * Registers the `/log` command that evaluates a [LogArgumentType] expression
- * and broadcasts the result to all players.
+ * The `/log` command, which evaluates a log expression and broadcasts the result to every player.
+ *
+ * @author Alumopper
  */
 object LogCommand {
     @JvmStatic
@@ -21,7 +22,6 @@ object LogCommand {
                     .then(argument("log", LogArgumentType())
                         .executes {
                             val log = LogArgumentType.getLog(it, "log")
-                            //build output text
                             val text = Component.empty()
                             for (l in log.logs){
                                 val data = l.get(it.source)

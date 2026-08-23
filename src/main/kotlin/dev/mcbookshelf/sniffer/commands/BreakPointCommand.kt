@@ -27,11 +27,10 @@ import net.minecraft.network.chat.Component
 import net.minecraft.server.permissions.Permissions
 
 /**
- * Brigadier registration for the `/breakpoint` command tree.
+ * The `/breakpoint` command tree.
  *
- * This object is a thin translator: it maps command arguments to v2
- * [dev.mcbookshelf.sniffer.dispatch.IInput] objects, dispatches them, and translates the returned
- * [dev.mcbookshelf.sniffer.dispatch.Output] into chat feedback. No debugger logic lives here.
+ * It is a translator and holds no debugger logic: arguments become inputs, they go through the dispatcher,
+ * and the output comes back as chat feedback.
  *
  * @author Alumopper
  * @author theogiraudet

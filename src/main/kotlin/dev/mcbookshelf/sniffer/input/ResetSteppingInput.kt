@@ -3,7 +3,8 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.IInput
 
 /**
- * Clear stepping counters and restore the debug toggle, preserving
- * breakpoints and scopes.
+ * Clears the stepping counters, leaving breakpoints and scopes alone.
+ *
+ * @author theogiraudet
  */
 data object ResetSteppingInput : IInput

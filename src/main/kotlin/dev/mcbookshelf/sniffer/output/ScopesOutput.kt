@@ -4,20 +4,22 @@ import dev.mcbookshelf.sniffer.state.RealPath
 import dev.mcbookshelf.sniffer.dispatch.Output
 
 /**
- * Result of a scopes query for a given stack frame.
+ * The scopes a stack frame exposes.
  *
- * @property scopes the list of variable scopes for the frame.
+ * @property scopes the variable scopes of that frame
+ * @author theogiraudet
  */
 data class ScopesOutput(val scopes: List<ScopeData>) : Output
 
 /**
- * Domain representation of a variable scope.
+ * A single variable scope.
  *
- * @property id unique scope ID (used as variablesReference).
- * @property name display name of the scope.
- * @property variableCount number of root-level variables in this scope.
- * @property functionName the Minecraft function path.
- * @property path the resolved filesystem path and kind, or null if unresolved.
+ * @property id id of the scope, which the client uses as a variables reference
+ * @property name name to display
+ * @property variableCount how many root variables the scope holds
+ * @property functionName location of the function, as `namespace:path`
+ * @property path where the function was loaded from, `null` if it could not be resolved
+ * @author theogiraudet
  */
 data class ScopeData(
     val id: Int,

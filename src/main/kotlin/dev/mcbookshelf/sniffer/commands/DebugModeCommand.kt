@@ -9,8 +9,9 @@ import net.minecraft.network.chat.Component
 import net.minecraft.server.permissions.Permissions
 
 /**
- * Registers the `/debugmode` command that toggles [DebugToggles.debugMode]
- * on or off, enabling or disabling the debug subsystem at runtime.
+ * The `/debugmode` command, which shows or hides the HUD overlay of the player running it.
+ *
+ * @author theogiraudet
  */
 object DebugModeCommand {
 

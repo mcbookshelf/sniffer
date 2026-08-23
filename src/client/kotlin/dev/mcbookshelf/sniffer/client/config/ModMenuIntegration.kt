@@ -6,7 +6,7 @@ import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 
 /**
- * Integration with ModMenu to provide a configuration screen for the Sniffer.
+ * Hands the config screen of the mod to ModMenu.
  *
  * @author theogiraudet
  */

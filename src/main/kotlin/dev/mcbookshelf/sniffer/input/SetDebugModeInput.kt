@@ -3,8 +3,9 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.IInput
 
 /**
- * Enable or disable the debug subsystem at runtime.
+ * Turns the HUD overlay of a player on or off.
  *
- * @param enabled `true` to turn debugging on, `false` to turn it off.
+ * @property enabled `true` to show it, `false` to hide it
+ * @author theogiraudet
  */
 data class SetDebugModeInput(val enabled: Boolean) : IInput

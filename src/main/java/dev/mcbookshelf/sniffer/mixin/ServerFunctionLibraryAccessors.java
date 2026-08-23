@@ -11,6 +11,11 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 import java.util.Map;
 
+/**
+ * Exposes the function map of the library, which the hot reload splices its results into.
+ *
+ * @author Alumopper
+ */
 @Mixin(ServerFunctionLibrary.class)
 public interface ServerFunctionLibraryAccessors {
 

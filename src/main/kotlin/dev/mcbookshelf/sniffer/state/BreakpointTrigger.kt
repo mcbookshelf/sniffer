@@ -4,12 +4,11 @@ import net.minecraft.commands.CommandSourceStack
 import org.slf4j.LoggerFactory
 
 /**
- * Triggers a pause at the current execution position.
+ * Announces a pause at the current execution position.
+ * It fires the stop event the DAP client listens to and turns debugging on.
+ * Called on the server thread, right before the execution is stashed.
  *
- * Notifies DAP stop consumers via [DebugEventBus] and enables debugging mode on [SteppingState].
- * Called from [dev.mcbookshelf.sniffer.mixin.UnboundDebugMixin] on the server thread, immediately before [PausedExecutionStore.stash].
- *
- * The world is not frozen at a breakpoint: only the paused datapack function is suspended, while ticks, players and other commands keep running.
+ * @author theogiraudet
  */
 object BreakpointTrigger {
 

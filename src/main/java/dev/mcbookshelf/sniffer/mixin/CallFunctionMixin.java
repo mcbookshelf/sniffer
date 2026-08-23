@@ -24,17 +24,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Mixin on {@link CallFunction} that handles debugger bookkeeping when a
- * function is called:
- * <ul>
- *   <li>Stores the function reference on the new {@link Frame} for call-stack tracking</li>
- *   <li>Pushes a debug scope to {@link ScopeManager} (with macro args if present)</li>
- *   <li>Queues a cleanup entry that pops the scope on normal function completion</li>
- * </ul>
+ * Mixin on {@link CallFunction} doing the debugger bookkeeping of a function call.
+ * It records the called function on the new {@link Frame}, pushes a debug scope,
+ * and queues the entry that pops that scope once the function completes.
  *
- * The cleanup entry is removed by {@link Frame#discard} when {@code /return}
- * is called, so {@link FrameMixin} handles scope popping in that case.
- * The two mechanisms are mutually exclusive: exactly one pop per push.
+ * {@code /return} discards the frame and with it that queued entry,
+ * so {@link FrameMixin} pops the scope instead, which keeps it to exactly one pop per push.
+ *
+ * @author theogiraudet
  */
 @Mixin(CallFunction.class)
 public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
@@ -43,10 +40,8 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
     private InstantiatedFunction<T> function;
 
     /**
-     * Injected at TAIL of {@code CallFunction.execute()} — after
-     * {@code ContinuationTask.schedule()} has queued the function entries.
-     * This ensures the cleanup entry is queued AFTER the function's commands,
-     * so it fires when all commands have completed.
+     * Injected at the tail, once {@code ContinuationTask.schedule()} has queued the entries of the function.
+     * The cleanup entry then lands behind them and fires only when every command has completed.
      */
     @Inject(
         method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V",
@@ -56,10 +51,8 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
             T sender, ExecutionContext<T> context, Frame frame, CallbackInfo ci,
             @Local(ordinal = 1) Frame newFrame
     ) {
-        // 1. Store function reference on the new frame (via accessor, no reflection)
         FrameUniqueAccessor.of(newFrame).setFunction(function);
 
-        // 2. Push debug scope
         String functionId = getFunctionId();
         CompoundTag macroArgs = MacroArgsStore.get(function);
         if (macroArgs != null && sender instanceof CommandSourceStack) {
@@ -68,10 +61,7 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
             ScopeManager.Companion.get().newScope(functionId, sender);
         }
 
-        // 3. Queue cleanup entry — pops scope on normal function completion.
-        //    If /return calls frame.discard(), this entry is removed (same depth),
-        //    and FrameMixin.beforeDiscard() handles the scope pop instead.
-        //    popScopeOnce() keeps the two paths mutually exclusive even when vanilla discards the same frame twice.
+        // popScopeOnce keeps this entry and FrameMixin exclusive, even when vanilla discards the same frame twice.
         context.queueNext(new CommandQueueEntry<>(newFrame, (s, c) -> FrameUniqueAccessor.of(newFrame).popScopeOnce()));
     }
 
@@ -88,8 +78,7 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
             }
             return plainText.id().toString();
         }
-        // Fallback — should not happen in practice since all InstantiatedFunctions
-        // are PlainTextFunction in vanilla Minecraft.
+        // Unreachable in vanilla, where every InstantiatedFunction is a PlainTextFunction.
         return "unknown";
     }
 }

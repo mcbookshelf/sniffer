@@ -7,13 +7,9 @@ import net.minecraft.network.chat.TextColor
 import net.minecraft.util.CommonColors
 
 /**
- * Renders the current debug call stack (from [ScopeManager]) as a chat
- * [Component]. Used by `/breakpoint stack` and by `AssertCommand` when an
- * assertion fails.
+ * Renders the debug call stack as a chat [Component], for `/breakpoint stack` and for a failed assertion.
  *
- * Lives here rather than on `BreakPointCommand` because it is a pure view
- * over [ScopeManager] and has no stepping-state coupling; putting it on
- * the brigadier command class was incidental history.
+ * @author theogiraudet
  */
 object StackFormatter {
 
@@ -28,12 +24,12 @@ object StackFormatter {
     fun stack(maxStack: Int): MutableComponent =
         render(maxStack = maxStack, color = CommonColors.WHITE, boldTop = true, highlightColor = CommonColors.HIGH_CONTRAST_DIAMOND)
 
-    /** Error-colored stack truncated to [maxStack] frames, topmost bold. */
+    /** Stack in the error color, truncated to [maxStack] frames, topmost bold. */
     @JvmStatic
     fun errorStack(maxStack: Int): MutableComponent =
         render(maxStack = maxStack, color = ERROR_COLOR, boldTop = true, highlightColor = ERROR_COLOR)
 
-    /** Full error-colored stack, topmost bold. */
+    /** Full stack in the error color, topmost bold. */
     @JvmStatic
     @Suppress("unused")
     fun errorStack(): Component =

@@ -3,7 +3,8 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.IInput
 
 /**
- * Programmatically trigger a breakpoint at the current execution position
- * (used by the `/breakpoint` command with no subcommand).
+ * Triggers a breakpoint at the current position, which is what a bare `/breakpoint` does.
+ *
+ * @author theogiraudet
  */
 data object TriggerBreakpointInput : IInput

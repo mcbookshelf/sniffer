@@ -5,10 +5,11 @@ import net.minecraft.commands.execution.ExecutionContext
 import java.util.Deque
 
 /**
- * Exposes private internals of [ExecutionContext] needed by the
- * pause/resume drain-and-stash flow. The pause path snapshots and
- * clears the queues; the resume path re-seeds them and re-enters
- * [ExecutionContext.runCommandQueue].
+ * Exposes the internals of [ExecutionContext] the pause and resume paths need,
+ * to drain its queues into a snapshot and to seed them back later.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 interface ExecutionContextAccessor<T : Any> {
     val commandQueue: Deque<CommandQueueEntry<T>>
@@ -16,7 +17,7 @@ interface ExecutionContextAccessor<T : Any> {
     var currentFrameDepth: Int
     var commandQuota: Int
 
-    /** Marks the context as stashed; while true the close() mixin no-ops. */
+    /** Whether the context is stashed, in which case closing it does nothing. */
     var isStashed: Boolean
 
     companion object {

@@ -9,14 +9,12 @@ import dev.mcbookshelf.sniffer.output.ResolveVariablesOutput
 import kotlin.math.min
 
 /**
- * Resolves variables for a given reference.
+ * Resolves the variables a reference points to, paginating them when the request asks for it.
  *
- * Scope roots and nested variables share one [dev.mcbookshelf.sniffer.state.VariableRegistry],
- * so resolution is a single lookup. Children are materialized lazily by
- * [dev.mcbookshelf.sniffer.state.VariableNode.children] on first request.
+ * Scope roots and nested variables live in the same registry, so this is a single lookup,
+ * and the children of the node are built on this first request.
  *
- * Applies optional pagination via [ResolveVariablesInput.start] and
- * [ResolveVariablesInput.count].
+ * @author theogiraudet
  */
 class ResolveVariablesHandler(
     private val scopeManager: ScopeManager,

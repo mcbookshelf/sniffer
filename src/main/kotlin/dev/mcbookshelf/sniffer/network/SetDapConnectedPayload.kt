@@ -7,13 +7,11 @@ import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 
 /**
- * Clientbound payload that notifies players whether a DAP client is currently
- * attached to the Sniffer WebSocket server. The HUD overlay reads this value
- * to choose between the "connected" and "disconnected" status icons.
+ * Tells the clients whether a DAP client is attached, which the HUD turns into its status icon.
+ * Broadcast to everyone on each change, so a player sees the indicator even if someone else approved the connection.
  *
- * Broadcast to every online player on every state change so any player with
- * debug mode enabled sees a live indicator, regardless of whether they were
- * the one who approved the attach.
+ * @property connected whether a client is attached
+ * @author theogiraudet
  */
 @JvmRecord
 data class SetDapConnectedPayload(val connected: Boolean) : CustomPacketPayload {

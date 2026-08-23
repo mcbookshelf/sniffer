@@ -3,9 +3,10 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.IInput
 
 /**
- * Retrieve the debug call stack with pagination.
+ * Retrieves a slice of the debug call stack.
  *
- * @property startFrame index of the first frame to return (0-based).
- * @property maxLevels maximum number of frames to return.
+ * @property startFrame zero indexed position of the first frame to return
+ * @property maxLevels how many frames to return at most
+ * @author theogiraudet
  */
 data class GetStackTraceInput(val startFrame: Int, val maxLevels: Int) : IInput

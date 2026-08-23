@@ -30,6 +30,8 @@ import org.lwjgl.glfw.GLFW
 
 
 /**
+ * Client entrypoint, registering the HUD overlay, the payload receivers and the debug keybinds.
+ *
  * @author Alumopper
  * @author theogiraudet
  */

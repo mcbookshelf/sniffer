@@ -3,18 +3,20 @@ package dev.mcbookshelf.sniffer.output
 import dev.mcbookshelf.sniffer.dispatch.Output
 
 /**
- * Result of setting breakpoints for a file.
+ * Result of setting the breakpoints of a file.
  *
- * @property results one entry per requested breakpoint line.
+ * @property results one entry per requested breakpoint line
+ * @author theogiraudet
  */
 data class SetBreakpointsOutput(val results: List<BreakpointResult>) : Output
 
 /**
- * Verification result for a single breakpoint.
+ * What became of a single requested breakpoint.
  *
- * @property line the 0-indexed line number.
- * @property id the unique breakpoint ID, or null if verification failed.
- * @property verified whether the breakpoint was successfully mapped to a function.
+ * @property line zero indexed line the breakpoint was requested on
+ * @property id unique id of the breakpoint, `null` when it could not be set
+ * @property verified whether the line was mapped to a function
+ * @author theogiraudet
  */
 data class BreakpointResult(
     val line: Int,

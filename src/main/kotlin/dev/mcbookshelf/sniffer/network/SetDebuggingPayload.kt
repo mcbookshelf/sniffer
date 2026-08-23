@@ -7,9 +7,10 @@ import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 
 /**
- * Clientbound payload mirroring [dev.mcbookshelf.sniffer.state.SteppingState.isDebugging]
- * to each client so the HUD can show or hide the bug overlay when execution
- * is paused on a breakpoint or during stepping.
+ * Mirrors to the clients whether an execution is paused, so the HUD can show or hide the bug overlay.
+ *
+ * @property debugging whether the debugger currently holds an execution
+ * @author theogiraudet
  */
 @JvmRecord
 data class SetDebuggingPayload(val debugging: Boolean) : CustomPacketPayload {

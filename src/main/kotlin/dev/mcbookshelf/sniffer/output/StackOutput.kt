@@ -4,8 +4,9 @@ import dev.mcbookshelf.sniffer.dispatch.Output
 import net.minecraft.network.chat.Component
 
 /**
- * Result of a stack-trace query.
+ * Result of a call stack request.
  *
- * @property stack the formatted call-stack component, ready to display.
+ * @property stack the formatted stack, ready to display
+ * @author theogiraudet
  */
 data class StackOutput(val stack: Component) : Output

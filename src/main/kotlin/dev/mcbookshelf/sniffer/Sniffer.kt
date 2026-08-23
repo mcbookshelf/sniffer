@@ -30,9 +30,9 @@ import java.io.InputStream
 import java.util.logging.LogManager
 
 /**
- * Main class of the Sniffer mod.
- * This mod provides debugging capabilities for Minecraft datapacks by adding breakpoints
- * and debugging features to help developers debug their datapack functions.
+ * Entrypoint of the mod, wiring the debugger to the server lifecycle.
+ * It resets the debugger state on start, runs the DAP WebSocket server,
+ * and registers the debug commands, argument types and payloads.
  *
  * @author Alumopper
  * @author theogiraudet
@@ -45,17 +45,14 @@ class Sniffer : ModInitializer {
         @JvmStatic
         val OBSERVED_PARTICLE: SimpleParticleType = FabricParticleTypes.simple()
 
-        /**
-         * WebSocket server instance for Debug Adapter Protocol communication.
-         * This server allows IDE integration by implementing DAP over WebSockets.
-         */
+        /** The running DAP WebSocket server, `null` while no server is up. */
         @JvmStatic
         var webSocketServer: Server? = null
             private set
     }
 
     override fun onInitialize() {
-        // Configure Java logging to reduce Tyrus logs
+        // Quieting the Tyrus logs, which are noisy at their default level.
         try {
             val inputStream: InputStream? = Sniffer::class.java.getResourceAsStream("/logging.properties")
             if (inputStream != null) {
@@ -68,14 +65,12 @@ class Sniffer : ModInitializer {
             logger.error("Failed to configure Java logging", e)
         }
 
-        // Load configuration
         DebuggerConfig.getInstance()
         logger.info("Sniffer configured to run on {}:{}/{}",
             DebuggerConfig.getInstance().host,
             DebuggerConfig.getInstance().port,
             DebuggerConfig.getInstance().path)
 
-        // Reset and initialize debugger state
         ServerLifecycleEvents.SERVER_STARTED.register { server ->
             logger.info("Resetting debugger state")
             ServerReference.set(server)
@@ -87,18 +82,15 @@ class Sniffer : ModInitializer {
             ConnectionState.setConnected(false)
             logger.info("Debugger state reset complete")
 
-            // Build the v2 action dispatcher (shared between DAP and chat entrypoints)
             SnifferDispatcher.init()
         }
 
         ServerLifecycleEvents.START_DATA_PACK_RELOAD.register { _, _ -> FunctionPathRegistry.clear() }
 
-        // Start WebSocket server for DAP communication using configured settings
         ServerLifecycleEvents.SERVER_STARTED.register { _ ->
             WebSocketServer.launch().ifPresent { wss -> webSocketServer = wss }
         }
 
-        // Handle server shutdown to clean up resources
         ServerLifecycleEvents.SERVER_STOPPED.register { _ ->
             logger.info("Shutting down debugger state")
             try {
@@ -115,7 +107,6 @@ class Sniffer : ModInitializer {
                 logger.error("Error shutting down debugger state", e)
             }
 
-            // Use the new clean WebSocket server shutdown method
             try {
                 WebSocketServer.stopServer()
             } catch (e: Exception) {
@@ -128,7 +119,6 @@ class Sniffer : ModInitializer {
 
         Registry.register(BuiltInRegistries.PARTICLE_TYPE, Identifier.fromNamespaceAndPath("sniffer", "observed_particle"), OBSERVED_PARTICLE)
 
-        // Register custom argument types
         ArgumentTypeRegistry.registerArgumentType(
             Identifier.tryBuild("sniffer", "log")!!,
             LogArgumentType::class.java,
@@ -152,8 +142,7 @@ class Sniffer : ModInitializer {
             PendingAuthRegistry.resolve(player.uuid, payload.requestId, payload.accepted)
         }
 
-        // Resync each player's HUD mirror on (re)connect so the server-side
-        // DebugModeState persistence survives a client disconnect.
+        // The HUD state lives on the server, so every joining player is sent the current value again.
         ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
             val player = handler.player
             val enabled = DebugModeState.isEnabled(player.uuid)

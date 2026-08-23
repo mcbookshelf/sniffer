@@ -3,8 +3,9 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.StepInput
 
 /**
- * Resume until the current function frame returns, then pause again.
+ * Resumes until the running function returns, then pauses again.
  *
- * @property lines number of commands to step; must be >= 1. Defaults to 1.
+ * @property lines how many commands to run, at least one
+ * @author theogiraudet
  */
 data class StepOutInput(override val lines: Int = 1) : StepInput

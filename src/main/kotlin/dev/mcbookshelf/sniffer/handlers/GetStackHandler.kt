@@ -9,6 +9,8 @@ import dev.mcbookshelf.sniffer.ui.StackFormatter
 
 /**
  * Returns the current debug call stack as a formatted [StackOutput].
+ *
+ * @author theogiraudet
  */
 class GetStackHandler : Handler<GetStackInput> {
 

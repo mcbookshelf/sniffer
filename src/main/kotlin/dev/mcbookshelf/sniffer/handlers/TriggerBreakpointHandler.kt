@@ -8,10 +8,9 @@ import dev.mcbookshelf.sniffer.output.Ack
 import dev.mcbookshelf.sniffer.state.BreakpointTrigger
 
 /**
- * Triggers a breakpoint at the current execution position.
+ * Triggers a breakpoint at the current execution position, which is what a bare `/breakpoint` does.
  *
- * Delegates to [BreakpointTrigger.trigger] which freezes the
- * tick-rate manager, notifies DAP stop consumers, and enables debugging mode.
+ * @author theogiraudet
  */
 class TriggerBreakpointHandler : Handler<TriggerBreakpointInput> {
 

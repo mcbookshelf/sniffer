@@ -8,6 +8,8 @@ import net.minecraft.network.chat.MutableComponent
 
 /**
  * Extension functions for Minecraft [MutableComponent] and Brigadier [StringReader].
+ *
+ * @author Alumopper
  */
 object Extension {
 

@@ -13,17 +13,27 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Tracks DAP WebSocket connections that are awaiting in-game approval from
- * a Minecraft operator.
+ * Tracks the DAP connections awaiting an in game approval from an operator.
  *
- * Thread-safety: mutated from Tyrus IO threads (onOpen / onClose), the
- * server thread (packet receiver), and the timeout scheduler. All state
- * mutations go through the [lock] monitor; lookups by [Session] use a
- * secondary index maintained alongside the primary by-UUID index.
+ * Mutations come from the Tyrus IO threads, the server thread and the timeout scheduler,
+ * so they all go through the [lock] monitor.
+ * Sessions get their own index, maintained alongside the one keyed by player.
+ *
+ * @author theogiraudet
  */
 object PendingAuthRegistry {
     private val logger = LoggerFactory.getLogger("sniffer")
 
+    /**
+     * One connection waiting for its player to answer.
+     *
+     * @property requestId identifies the request, and is echoed back by the answer
+     * @property session the WebSocket connection being authenticated
+     * @property playerUuid the player being asked
+     * @property onApproved run when the player accepts
+     * @property onRejected run when the player refuses, when the prompt times out, or when the socket drops
+     * @property timeoutTask the scheduled rejection, cancelled as soon as the request is resolved
+     */
     data class PendingAuth(
         val requestId: UUID,
         val session: Session,
@@ -38,9 +48,8 @@ object PendingAuthRegistry {
     private val lock = Any()
 
     /**
-     * After a player rejects a prompt (or it times out), further prompts for
-     * that player are auto-rejected for this many milliseconds so a remote
-     * client can't spam the modal.
+     * How long a player is left alone after rejecting a prompt or letting it time out.
+     * Requests arriving in that window are refused without prompting, so a remote client cannot spam the modal.
      */
     private const val REJECTION_COOLDOWN_MS = 10_000L
     private val rejectionCooldownUntil = ConcurrentHashMap<UUID, Long>()
@@ -50,12 +59,11 @@ object PendingAuthRegistry {
     }
 
     /**
-     * Register a new pending auth, superseding any prior pending request for
-     * the same player. The previous request (if any) is cancelled and its
-     * session closed with a policy-violation reason.
+     * Registers a new pending request, superseding any earlier one for the same player.
+     * The superseded request is cancelled and its session closed.
      *
-     * Requests arriving during the player's rejection cooldown are refused
-     * outright without prompting.
+     * @param pending the request to register, already carrying its callbacks
+     * @param timeoutSeconds how long the player has to answer before the request is rejected
      */
     fun register(pending: PendingAuth, timeoutSeconds: Int) {
         val cooldownUntil = rejectionCooldownUntil[pending.playerUuid] ?: 0L
@@ -97,10 +105,7 @@ object PendingAuthRegistry {
         }, timeoutSeconds.toLong(), TimeUnit.SECONDS)
     }
 
-    /**
-     * Resolve a pending auth by player UUID. Called from the serverbound
-     * payload receiver after the player clicks Accept or Reject.
-     */
+    /** Resolves a pending request, from the payload the player sends back by clicking Accept or Reject. */
     fun resolve(playerUuid: UUID, requestId: UUID, accepted: Boolean) {
         val pending = synchronized(lock) {
             val current = byPlayer[playerUuid] ?: return
@@ -123,11 +128,7 @@ object PendingAuthRegistry {
         rejectionCooldownUntil[playerUuid] = System.currentTimeMillis() + REJECTION_COOLDOWN_MS
     }
 
-    /**
-     * Cancel any pending auth tied to the given session. Called from
-     * `WebSocketServer.onClose` / `onError` so a dropped client cannot leak
-     * a pending prompt.
-     */
+    /** Cancels the request tied to [session], so a dropped client cannot leave a prompt behind. */
     fun cancel(session: Session) {
         val pending = synchronized(lock) {
             val current = bySession.remove(session) ?: return
@@ -138,7 +139,7 @@ object PendingAuthRegistry {
         try { pending.onRejected() } catch (e: Exception) { logger.error("onRejected failed", e) }
     }
 
-    /** Server stop: drop everything. */
+    /** Drops every pending request and cooldown, on server stop. */
     fun clearAll() {
         rejectionCooldownUntil.clear()
         val all = synchronized(lock) {

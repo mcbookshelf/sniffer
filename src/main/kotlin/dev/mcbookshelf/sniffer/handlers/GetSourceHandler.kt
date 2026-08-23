@@ -10,6 +10,8 @@ import net.minecraft.resources.Identifier
 
 /**
  * Retrieves the source text of a function by its Minecraft identifier.
+ *
+ * @author theogiraudet
  */
 class GetSourceHandler : Handler<GetSourceInput> {
 

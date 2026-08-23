@@ -7,8 +7,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
 /**
- * Accessor-only mixin on {@link FilePackResources} — exposes the zip file
- * access and prefix for function-path resolution. No method overrides.
+ * Exposes the zip file and the prefix of a {@link FilePackResources}, so a function can be traced back to it.
+ *
+ * @author theogiraudet
+ * @author Alumopper
  */
 @Mixin(FilePackResources.class)
 public class FilePackResourcesAccessorMixin implements FilePackResourcesAccessor {

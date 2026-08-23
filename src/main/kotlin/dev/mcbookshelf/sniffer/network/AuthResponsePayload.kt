@@ -9,8 +9,11 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 import java.util.UUID
 
 /**
- * Serverbound payload carrying the player's accept/reject decision for a
- * pending DAP authentication prompt.
+ * Carries back the answer of a player to an authentication prompt.
+ *
+ * @property requestId the request being answered
+ * @property accepted whether the player let the client in
+ * @author theogiraudet
  */
 @JvmRecord
 data class AuthResponsePayload(val requestId: UUID, val accepted: Boolean) : CustomPacketPayload {

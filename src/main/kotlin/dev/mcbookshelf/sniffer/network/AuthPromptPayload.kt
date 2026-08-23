@@ -9,8 +9,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 import java.util.UUID
 
 /**
- * Clientbound payload sent to a player whose username was declared by an
- * incoming DAP WebSocket connection. Triggers the in-game accept/reject prompt.
+ * Asks a player to accept or reject the DAP connection that named them.
+ *
+ * @property requestId identifies the pending request the answer will refer to
+ * @property clientDescription what to show the player about the client asking
+ * @property timeoutSeconds how long the prompt stays up before rejecting on its own
+ * @author theogiraudet
  */
 @JvmRecord
 data class AuthPromptPayload(

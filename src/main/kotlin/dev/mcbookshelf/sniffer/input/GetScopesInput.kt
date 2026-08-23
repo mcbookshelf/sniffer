@@ -3,8 +3,9 @@ package dev.mcbookshelf.sniffer.input
 import dev.mcbookshelf.sniffer.dispatch.IInput
 
 /**
- * Retrieve the variable scopes for a given stack frame.
+ * Retrieves the variable scopes of a stack frame.
  *
- * @property frameId the scope/frame ID to look up.
+ * @property frameId id of the frame to look up
+ * @author theogiraudet
  */
 data class GetScopesInput(val frameId: Int) : IInput

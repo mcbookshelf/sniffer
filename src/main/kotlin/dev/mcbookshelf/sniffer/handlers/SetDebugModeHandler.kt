@@ -11,14 +11,12 @@ import dev.mcbookshelf.sniffer.state.DebugModeState
 import net.minecraft.server.level.ServerPlayer
 
 /**
- * Updates the caller's HUD-only debug mode.
+ * Turns the HUD overlay of the calling player on or off.
  *
- * Debug mode is per-player (see [DebugModeState]) and never gates any
- * debugging capability — it only controls which icons the player's HUD
- * renders. This handler writes the new value to the server-side map and
- * pushes a [SetDebugModePayload] to that player so their client mirror
- * stays in sync. Non-player sources (console, command blocks) are a no-op
- * since there is no HUD to update.
+ * The new value is written to [DebugModeState] and pushed to that player, so their client mirror follows.
+ * A source that is not a player has no HUD, and is ignored.
+ *
+ * @author theogiraudet
  */
 class SetDebugModeHandler : Handler<SetDebugModeInput> {
 

@@ -10,11 +10,12 @@ import dev.mcbookshelf.sniffer.output.StackTraceOutput
 import kotlin.math.min
 
 /**
- * Returns a paginated slice of the debug call stack as domain objects.
+ * Returns a slice of the debug call stack.
  *
- * The head frame's line and name are taken from [ScopeManager.getCurrentScope]
- * because the mixin updates the current scope's line on pause, while
- * deeper frames retain the line at which they called the next function.
+ * The top frame is read from the current scope, the one the mixin keeps up to date,
+ * while every frame below it stays on the line from which it called the next one.
+ *
+ * @author theogiraudet
  */
 class GetStackTraceHandler(
     private val scopeManager: ScopeManager,

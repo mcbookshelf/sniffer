@@ -33,11 +33,13 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Registers the `/watch` command for hot-reloading datapack functions.
+ * The `/watch` command, which hot reloads datapack functions.
  *
- * Supports `start`/`stop` to begin or end file watching on a datapack,
- * `reload` to manually apply pending changes, and `auto` to toggle
- * automatic reload on file change via [WatcherManager].
+ * `start` and `stop` control the file watching of a datapack, `reload` applies the pending changes,
+ * and `auto` decides whether a file change applies itself.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 object WatchCommand {
 
@@ -84,7 +86,6 @@ object WatchCommand {
                     ).then(literal<CommandSourceStack>("auto")
                         .then(argument("bool", BoolArgumentType.bool())
                             .executes {
-                                //set if watcher will auto reload function when changed
                                 val bool = BoolArgumentType.getBool(it, "bool")
                                 isAutoReload = bool
                                 if(isAutoReload){
@@ -95,7 +96,6 @@ object WatchCommand {
                                 return@executes 1
                             }
                         ).executes {
-                            //return if auto reload is enabled
                             it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto", isAutoReload) }, false)
                             return@executes 1
                         }
@@ -122,8 +122,6 @@ object WatchCommand {
             val functionsRoot = packPath.resolve("data")
             val ok = WatcherManager.start(id, functionsRoot, server){
                 server.execute {
-//                    val msg = java.lang.String.format("[watch:%s] %s %s", id, it.eventType(), it.path())
-//                    server.playerManager.broadcast(Component.of(msg), false)
                     processFunctionChange(it, packPath)
                     if(isAutoReload){
                         hotReload(server)
@@ -197,7 +195,6 @@ object WatchCommand {
         }
     }
 
-    // Record function change
     private fun created(): List<Pair<Path, Path>> =
         map.entries.filter { it.value.state == State.CREATED }.map { it.key to it.value.datapack }
 

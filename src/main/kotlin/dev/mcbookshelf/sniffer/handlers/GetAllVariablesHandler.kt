@@ -8,10 +8,9 @@ import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.input.GetAllVariablesInput
 
 /**
- * Retrieves all variables from the current debug scope.
+ * Retrieves every macro argument of the current scope, or nothing when there is no scope or no macro.
  *
- * Returns an [AllVariablesOutput] with the scope variables, or null
- * if no scope is active.
+ * @author theogiraudet
  */
 class GetAllVariablesHandler : Handler<GetAllVariablesInput> {
 
