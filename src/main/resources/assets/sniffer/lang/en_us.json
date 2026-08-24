@@ -10,6 +10,8 @@
   "sniffer.commands.breakpoint.get": "Argument %s has the following value: %s",
   "sniffer.commands.breakpoint.get.fail.error": "Unexpected error while getting the value of argument: %s",
   "sniffer.commands.breakpoint.get.fail.not_macro": "Current function is not a macro",
+  "sniffer.commands.breakpoint.pause": "Pausing on the next command that runs",
+  "sniffer.commands.breakpoint.pause.already": "Execution is already paused",
   "sniffer.commands.breakpoint.move": "The game is now moving on",
   "sniffer.commands.breakpoint.move.not_debugging": "Can only use `continue` command in breakpoint mode",
   "sniffer.commands.breakpoint.set": "Breakpoint has triggered",

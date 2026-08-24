@@ -9,6 +9,8 @@
   "sniffer.commands.breakpoint.get": "L'argument %s a la valeur suivante : %s",
   "sniffer.commands.breakpoint.get.fail.error": "Erreur inattendue lors de la récupération de la valeur de l'argument : %s",
   "sniffer.commands.breakpoint.get.fail.not_macro": "La fonction actuelle n'est pas une macro",
+  "sniffer.commands.breakpoint.pause": "Pause à la prochaine commande exécutée",
+  "sniffer.commands.breakpoint.pause.already": "L'exécution est déjà en pause",
   "sniffer.commands.breakpoint.move": "Le jeu reprend son cours",
   "sniffer.commands.breakpoint.move.not_debugging": "La commande `continue` ne peut être utilisée qu'en mode point d'arrêt",
   "sniffer.commands.breakpoint.set": "Un point d'arrêt a été déclenché",

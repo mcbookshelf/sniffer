@@ -18,6 +18,7 @@ fun buildHandlers(): List<Handler<*>> {
         StepInHandler(),
         StepOutHandler(),
         ContinueHandler(),
+        PauseHandler(),
         ResetSteppingHandler(),
         SetDebugModeHandler(),
         TriggerBreakpointHandler(BreakpointManager),

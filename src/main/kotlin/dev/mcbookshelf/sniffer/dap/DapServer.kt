@@ -177,6 +177,7 @@ class DapServer : IDebugProtocolServer {
 
     override fun pause(args: PauseArguments): CompletableFuture<Void> {
         LOGGER.debug("Pause request received with arguments: {}", args)
+        dispatchAction(PauseInput, "pause")
         return CompletableFuture.completedFuture(null)
     }
 

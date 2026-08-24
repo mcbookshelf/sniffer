@@ -17,6 +17,7 @@ object BreakpointTrigger {
     /** DAP stop reasons, reported verbatim to the client. */
     const val BREAKPOINT_REASON = "breakpoint"
     const val STEP_REASON = "step"
+    const val PAUSE_REASON = "pause"
 
     /**
      * @param reason why execution stopped, as the DAP client is told.
@@ -29,7 +30,8 @@ object BreakpointTrigger {
             val scope = ScopeManager.get().currentScope
             val fn = scope.map { it.function }.orElse("")
             val line = scope.map { it.line }.orElse(-1)
-            val bpId = BreakpointManager.getBreakpointId(fn, line).orElse(-1)
+            // A pause lands wherever execution happened to be, so no breakpoint was hit even if one sits on that line.
+            val bpId = if (reason == PAUSE_REASON) -1 else BreakpointManager.getBreakpointId(fn, line).orElse(-1)
             DebugEventBus.fireStop(bpId, reason)
 
             SteppingState.setDebugging(true)

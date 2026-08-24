@@ -788,16 +788,27 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
     }
 
     @GameTest(environment = "sniffer_test:dap_pause", maxTicks = MAX_TICKS)
-    fun pauseIsAcknowledgedButSuspendsNothing(helper: GameTestHelper) {
+    fun pauseHaltsTheNextFunctionThatRuns(helper: GameTestHelper) {
         val session = DebugSession(helper)
         val dap = initDapClient()
 
         helper.startSequence()
-            // The debugger only stops at breakpoints and steps, so the editor's pause button is answered without suspending anything.
+            // Functions run in bursts rather than continuously, so the editor's pause button usually finds nothing executing.
+            // The request arms a stop instead of performing one, and the next line to run anywhere honours it.
             .thenRequest("pause", { dap.pause(PauseArguments()) })
             .thenExecute {
                 assertThat(session).isNotPaused()
-                assertTrue(events.stopped.isEmpty(), "A pause request should not report a stop")
+                assertTrue(events.stopped.isEmpty(), "Nothing was running, so nothing has stopped yet")
+            }
+            .thenExecute { session.run("function $LINEAR") }
+            .thenAwaitEvent("stopped", events.stopped) { event ->
+                assertEquals(event.reason, "pause", "stop reason")
+                assertTrue(event.hitBreakpointIds == null, "No breakpoint was hit, so none should be named")
+            }
+            .thenExecute {
+                assertThat(session).isPaused("The armed pause should have halted the function")
+                // Halted on the first line, so none of the function has run.
+                assertThat(session).hasExecuted()
             }
             .thenSucceedAndClose()
     }

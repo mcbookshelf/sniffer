@@ -173,6 +173,24 @@ class BreakpointCommandIntegrationGameTest : AbstractDapIntegrationGameTest() {
         helper.succeed()
     }
 
+    @GameTest(environment = "sniffer_test:cmd_pause", maxTicks = MAX_TICKS)
+    fun pauseInGameHaltsTheNextFunctionThatRuns(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+
+        helper.startSequence()
+            // Unlike the other subcommands, this one is issued while nothing is suspended, so it arms a stop instead of performing one.
+            .thenExecute { session.run("breakpoint pause") }
+            .thenExecute { assertThat(session).isNotPaused("There is nothing running to halt yet") }
+            .thenExecute { session.run("function $LINEAR") }
+            .thenWaitUntil { assertThat(session).isPaused("The armed pause should have halted the function") }
+            // Halted on the first line, so none of the function has run.
+            .thenExecute { assertThat(session).hasExecuted() }
+            // A pause suspends execution the same way a breakpoint does, so the usual resume has to pick it up again.
+            .thenExecute { session.run("breakpoint continue") }
+            .thenWaitUntil { assertThat(session).hasExecuted("a", "b", "c") }
+            .thenSucceed()
+    }
+
     @GameTest(environment = "sniffer_test:cmd_continue", maxTicks = MAX_TICKS)
     fun continueInGameResumesTheAttachedDapClient(helper: GameTestHelper) {
         val session = DebugSession(helper)
