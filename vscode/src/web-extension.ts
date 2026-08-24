@@ -9,8 +9,13 @@
  */
 
 import * as vscode from 'vscode';
+import { configureLaunch, offerSetup } from './configureLaunch';
 
 export function activate(context: vscode.ExtensionContext) {
+	context.subscriptions.push(
+		vscode.commands.registerCommand('sniffer.configureLaunch', () => configureLaunch())
+	);
+	void offerSetup(context);
 }
 
 export function deactivate() {

@@ -66,12 +66,21 @@
   "main": "./dist/extension.js",
   "browser": "./dist/web-extension.js",
   "activationEvents": [
-    "onDebug"
+    "onDebug",
+    "onCommand:sniffer.configureLaunch",
+    "workspaceContains:**/pack.mcmeta"
   ],
   "workspaceTrust": {
     "request": "never"
   },
   "contributes": {
+    "commands": [
+      {
+        "command": "sniffer.configureLaunch",
+        "title": "Configure Debug Configuration",
+        "category": "Sniffer"
+      }
+    ],
     "breakpoints": [
       {
         "language": "mcfunction"
@@ -111,7 +120,7 @@
             "type": "sniffer",
             "request": "attach",
             "name": "Connect to Minecraft",
-            "address": "localhost:25599/dap",
+            "address": "ws://localhost:25599/dap",
             "pathMapping": {
               "/remote/path": "${workspaceFolder}"
             }
@@ -125,7 +134,7 @@
               "type": "sniffer",
               "request": "attach",
               "name": "Connect to Minecraft",
-              "address": "localhost:25599/dap",
+              "address": "ws://localhost:25599/dap",
               "pathMapping": {
                 "/remote/path": "${workspaceFolder}"
               }
