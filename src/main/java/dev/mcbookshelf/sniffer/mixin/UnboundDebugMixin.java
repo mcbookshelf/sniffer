@@ -91,6 +91,14 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
             stopReason = BreakpointTrigger.BREAKPOINT_REASON;
         }
 
+        // A pause request is honoured by the first line that gets here, and consumed even when a breakpoint won the race.
+        if (SteppingState.pauseRequested) {
+            SteppingState.pauseRequested = false;
+            if (stopReason == null) {
+                stopReason = BreakpointTrigger.PAUSE_REASON;
+            }
+        }
+
         // shouldStepPause decrements the step counter, so it only runs when no breakpoint has already fired.
         if (stopReason == null && SteppingState.isDebugging && shouldStepPause(frame.depth())) {
             stopReason = BreakpointTrigger.STEP_REASON;

@@ -12,6 +12,7 @@ import dev.mcbookshelf.sniffer.input.ContinueInput
 import dev.mcbookshelf.sniffer.input.GetAllVariablesInput
 import dev.mcbookshelf.sniffer.input.GetStackInput
 import dev.mcbookshelf.sniffer.input.GetVariableInput
+import dev.mcbookshelf.sniffer.input.PauseInput
 import dev.mcbookshelf.sniffer.input.ResetSteppingInput
 import dev.mcbookshelf.sniffer.input.StepInInput
 import dev.mcbookshelf.sniffer.input.StepOutInput
@@ -78,6 +79,14 @@ object BreakPointCommand {
                             .executes {
                                 it.source.sendSuccess({ Component.translatable("sniffer.commands.breakpoint.move") }, false)
                                 dispatch(ContinueInput, it.source)
+                                1
+                            }
+                    )
+                    .then(
+                        Commands.literal("pause")
+                            .executes {
+                                it.source.sendSuccess({ Component.translatable("sniffer.commands.breakpoint.pause") }, false)
+                                dispatch(PauseInput, it.source)
                                 1
                             }
                     )

@@ -47,6 +47,14 @@ object SteppingState {
     @JvmField
     var stepDepth: Int = -1
 
+    /**
+     * Whether a pause has been asked for and no line has honoured it yet.
+     * Written from the DAP thread, read and cleared by `UnboundDebugMixin` on the server thread.
+     */
+    @JvmField
+    @Volatile
+    var pauseRequested: Boolean = false
+
     /** The command source that was active when the breakpoint triggered. */
     @JvmStatic
     var currSource: CommandSourceStack? = null
@@ -68,6 +76,7 @@ object SteppingState {
         stepsRemaining = 0
         stepType = StepType.STEP_IN
         stepDepth = -1
+        pauseRequested = false
         currSource = null
     }
 
