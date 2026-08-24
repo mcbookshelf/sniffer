@@ -17,9 +17,14 @@
 
 import * as vscode from 'vscode';
 import { SocketDescriptorFactory } from './SocketDescriptorFactory';
+import { configureLaunch, offerSetup } from './configureLaunch';
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
     const socketDebugFactory = new SocketDescriptorFactory();
 	console.log('activate');
     await socketDebugFactory.activate(context);
+    context.subscriptions.push(
+        vscode.commands.registerCommand('sniffer.configureLaunch', () => configureLaunch())
+    );
+    await offerSetup(context);
 };
