@@ -14,7 +14,7 @@ import WebSocketStream from 'websocket-stream';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ProtocolServer } from '@vscode/debugadapter/lib/protocol';
 import * as vscode from 'vscode';
-import { TerminatedEvent } from '@vscode/debugadapter';
+import { Response, TerminatedEvent } from '@vscode/debugadapter';
 
 const WEBSOCKET_REGEX = /^wss?:\/\/|^https?:\/\//;
 const SOCKET_TIMEOUT = 10000;
@@ -22,6 +22,8 @@ const PATH_PREFIX = '"path":"';
 
 export class SocketDebugSession extends ProtocolServer {
     protected adapter: DebugAdapter;
+    private connected = false;
+    private terminated = false;
 
     public constructor(address: string, protected pathMapping?: { [key: string]: string }) {
         console.log('SocketDebugSession constructor', address);
@@ -32,14 +34,9 @@ export class SocketDebugSession extends ProtocolServer {
             throw new Error('Raw socket connections are not supported, use a websocket address');
         }
         this.adapter.on('message', message => this.onMessage(message));
-        this.adapter.on('error', (event: DebugProtocol.Event) => {
-            this.emit(event.event, event);
-            this.terminateSession();
-        });
-        this.adapter.on('close', (event: DebugProtocol.Event) => {
-            this.emit(event.event, event);
-            this.terminateSession();
-        });
+        this.adapter.on('connect', () => this.connected = true);
+        this.adapter.on('error', () => this.terminateSession());
+        this.adapter.on('close', () => this.terminateSession());
     }
 
     public dispose() {
@@ -47,6 +44,10 @@ export class SocketDebugSession extends ProtocolServer {
     }
 
     protected async dispatchRequest(request: DebugProtocol.Request): Promise<void> {
+        if (this.terminated) {
+            this.sendResponse(new Response(request));
+            return;
+        }
         const message = this.replacePaths(request, 'outgoing');
         this.adapter.send(message);
     }
@@ -84,9 +85,16 @@ export class SocketDebugSession extends ProtocolServer {
     }
 
     private terminateSession() {
+        if (this.terminated) {
+            return;
+        }
+        this.terminated = true;
         console.log('WebSocket connection closed, terminating debug session');
+        if (this.connected) {
+            vscode.window.showWarningMessage('Lost the connection to Minecraft, ending the debug session.');
+        }
         this.sendEvent(new TerminatedEvent());
-        // vscode.window.showWarningMessage('Connection reset detected, terminating debug session');
+        this.adapter.stop();
     }
 }
 
@@ -195,19 +203,20 @@ class WebsocketDebugAdapter extends DebugAdapter {
             stream.on('error', (error) => {
                 const message = formatConnectionError(error, closeCode, closeReason);
                 console.error(`WebSocket connection error: ${message}`);
-                vscode.window.showErrorMessage(`Cannot attach to debug server at ${formattedAddress}: ${message}`);
+                vscode.window.showErrorMessage(`Cannot attach to the Minecraft debug server at ${formattedAddress}: ${message}`);
             });
 
             stream.on('connect', () => {
                 console.log(`Successfully connected to WebSocket server at: ${formattedAddress}`);
-                vscode.window.showInformationMessage(`Connected to debug server at ${formattedAddress}`);
+                this.emit('connect');
+                vscode.window.showInformationMessage(`Connected to the Minecraft debug server at ${formattedAddress}`);
             });
 
             return stream;
         } catch (error: any) {
             const errorMessage = error ? (error.message || JSON.stringify(error)) : 'Unknown error';
             console.error(`Failed to create WebSocket connection: ${errorMessage}`);
-            vscode.window.showErrorMessage(`Failed to create WebSocket connection to ${address}: ${errorMessage}`);
+            vscode.window.showErrorMessage(`Failed to open a connection to the Minecraft debug server at ${address}: ${errorMessage}`);
             throw error;
         }
     }
