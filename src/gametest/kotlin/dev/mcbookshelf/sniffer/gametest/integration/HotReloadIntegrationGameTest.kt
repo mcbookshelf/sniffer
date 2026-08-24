@@ -18,7 +18,7 @@ import net.minecraft.world.level.storage.LevelResource
  */
 class HotReloadIntegrationGameTest {
 
-    @GameTest(environment = "sniffer_test:hot_reload", maxTicks = 100_000)
+    @GameTest(environment = "sniffer_test:hot_reload", maxTicks = MAX_TICKS)
     fun watchedFunctionsAreCreatedModifiedAndDeletedInPlace(helper: GameTestHelper) {
         val session = DebugSession(helper)
         val pack = session.server.getWorldPath(LevelResource.DATAPACK_DIR).resolve(PACK)
@@ -59,7 +59,7 @@ class HotReloadIntegrationGameTest {
             .thenSucceed()
     }
 
-    @GameTest(environment = "sniffer_test:hot_reload_auto", maxTicks = 100_000)
+    @GameTest(environment = "sniffer_test:hot_reload_auto", maxTicks = MAX_TICKS)
     fun autoReloadAppliesAChangeWithoutBeingAsked(helper: GameTestHelper) {
         val session = DebugSession(helper)
         val pack = session.server.getWorldPath(LevelResource.DATAPACK_DIR).resolve(AUTO_PACK)
@@ -126,5 +126,13 @@ class HotReloadIntegrationGameTest {
 
         /** Wall clock settling time for the filesystem and the watcher. */
         const val SETTLE_MS = 500L
+
+        /**
+         * The tick budget, which is only a safety net here.
+         * What this test actually waits for is a few seconds of wall clock, and a tick of a game test server is not a unit of time:
+         * the same wait cost 591 ticks in a full suite run and over 3000 in a run of this class alone, so a budget sized for one machine's tick rate fails on a faster one while nothing is wrong.
+         * The number is therefore far above what any passing run needs, and only a real hang ever reaches it.
+         */
+        const val MAX_TICKS = 1_000_000
     }
 }
