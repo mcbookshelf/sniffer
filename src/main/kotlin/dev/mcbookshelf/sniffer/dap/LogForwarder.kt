@@ -1,5 +1,6 @@
 package dev.mcbookshelf.sniffer.dap
 
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.Appender
 import org.apache.logging.log4j.core.LogEvent
@@ -16,6 +17,8 @@ import java.util.concurrent.TimeUnit
  *
  * An appender on the root logger picks up every line the game writes, Sniffer's own and every other mod's,
  * and a thread of its own is what sends them.
+ * The game must never wait on the IDE: writing a WebSocket frame from the thread that logged would hold the server thread
+ * for as long as the reader on the other end takes, so lines are queued instead, and dropped once the queue is full.
  *
  * @author theogiraudet
  */
@@ -119,6 +122,10 @@ object LogForwarder {
         override fun append(event: LogEvent) {
             // Anything logged in the sender thread is ignored, otherwise a send that logs feeds itself forever.
             if (Thread.currentThread() === sender) return
+            // Only what a server would write to its log file is mirrored.
+            // Minecraft keeps its root logger at INFO, so this drops nothing in production and, in a development environment,
+            // drops the account the mod keeps of every request it answers, which describes the session rather than the pack.
+            if (!event.level.isMoreSpecificThan(Level.INFO)) return
             queue.offer(layout.toSerializable(event) as String)
         }
     }

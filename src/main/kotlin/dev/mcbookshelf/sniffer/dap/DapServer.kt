@@ -67,6 +67,7 @@ class DapServer : IDebugProtocolServer {
         val capabilities = Capabilities().apply {
             supportsConfigurationDoneRequest = true
             supportsConditionalBreakpoints = true
+            supportsRestartRequest = true
         }
 
         return CompletableFuture.completedFuture(capabilities).thenApply { c ->
@@ -99,6 +100,17 @@ class DapServer : IDebugProtocolServer {
         if (SteppingState.isDebugging) {
             dispatchAction(ContinueInput, "disconnect")
         }
+        return CompletableFuture.completedFuture(null)
+    }
+
+    /**
+     * Sniffer attaches to a running game and never launches nor replays anything, so there is nothing to restart.
+     * The request is answered and ignored: VS Code always shows the button, and claiming the capability
+     * is the only way to stop it from falling back to a disconnect and reconnect,
+     * which would drop the session and raise a new authorization prompt in game.
+     */
+    override fun restart(args: RestartArguments): CompletableFuture<Void> {
+        LOGGER.debug("Restart request received with arguments: {}, ignoring it", args)
         return CompletableFuture.completedFuture(null)
     }
 

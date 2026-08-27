@@ -47,3 +47,6 @@ replay_*.log
 logs/
 
 .fabric
+
+# Sphinx docs
+docs/_build/

@@ -1,0 +1,93 @@
+name: 🐛 Bug Report
+description: Report a reproducible bug to help us investigate and fix it.
+type: 🐛 Bug
+body:
+  - type: input
+    attributes:
+      label: 🔢 Version
+      description: |
+        What version of Sniffer are you using? (e.g., `v1.0.0`).
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 🎮 Minecraft Version
+      description: |
+        What version of Minecraft and Fabric Loader are you running? (e.g., `26.2`, loader `0.19.3`).
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🧩 Affected Part
+      description: |
+        Where does the bug happen?
+      options:
+        - Mod (in game)
+        - VS Code extension
+        - Both
+        - Documentation
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 🔍 Related Feature
+      description: |
+        What feature is affected? (e.g., `/breakpoint step_out`, conditional breakpoints, `#!log`, hot reload).
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ✅ Expected Behavior
+      description: |
+        What should happen under normal conditions? Describe the expected behavior.
+      placeholder: |
+        Example: The execution stops on the first command of the called function.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ❌ Actual Behavior
+      description: |
+        What actually happens instead of the expected behavior? Is there an error or malfunction?
+      placeholder: |
+        Example: The execution runs to the end of the function without stopping.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🔁 Steps to Reproduce
+      description: |
+        Provide a step-by-step guide to help us replicate the issue.
+        A minimal datapack, or the `.mcfunction` files involved, helps a lot.
+      placeholder: |
+        Example:
+        1. Set a breakpoint on line 3 of `foo:bar`.
+        2. Attach VS Code and run `/function foo:bar`.
+        3. Click *Step Into* on the `function foo:baz` command.
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: 📄 Logs
+      description: |
+        Any relevant output: the game's `logs/latest.log`, and the *Sniffer* debug console in VS Code.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: 💡 Possible Fix
+      description: |
+        Do you have a suggestion for a fix, or an idea of what may be causing the issue?
+      placeholder: |
+        Example: The stepping depth may not be reset when a function returns early.
+    validations:
+      required: false

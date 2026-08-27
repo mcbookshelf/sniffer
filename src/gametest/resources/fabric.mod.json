@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "sniffer-gametest",
-	"version": "1.0.0",
+	"version": "${version}",
 	"name": "Sniffer Game Tests",
 	"environment": "*",
 	"entrypoints": {

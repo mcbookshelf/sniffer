@@ -103,11 +103,13 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	}
 }
 
-processResources {
-	inputs.property "version", project.version
+[processResources, processGametestResources].each { task ->
+	task.configure {
+		inputs.property "version", project.version
 
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
+		filesMatching("fabric.mod.json") {
+			expand "version": project.version
+		}
 	}
 }
 
