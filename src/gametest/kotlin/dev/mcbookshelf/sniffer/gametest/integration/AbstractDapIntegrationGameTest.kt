@@ -12,6 +12,7 @@ import jakarta.websocket.MessageHandler
 import jakarta.websocket.Session
 import net.minecraft.gametest.framework.GameTestSequence
 import org.eclipse.lsp4j.debug.ContinuedEventArguments
+import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.launch.DSPLauncher
@@ -178,6 +179,7 @@ abstract class AbstractDapIntegrationGameTest {
         val stopped: Queue<StoppedEventArguments> = ConcurrentLinkedQueue()
         val continued: Queue<ContinuedEventArguments> = ConcurrentLinkedQueue()
         val terminated: Queue<TerminatedEventArguments> = ConcurrentLinkedQueue()
+        val output: Queue<OutputEventArguments> = ConcurrentLinkedQueue()
 
         override fun initialized() {
             initialized.add(Unit)
@@ -195,11 +197,16 @@ abstract class AbstractDapIntegrationGameTest {
             terminated.add(args)
         }
 
+        override fun output(args: OutputEventArguments) {
+            output.add(args)
+        }
+
         fun clear() {
             initialized.clear()
             stopped.clear()
             continued.clear()
             terminated.clear()
+            output.clear()
         }
     }
 }
