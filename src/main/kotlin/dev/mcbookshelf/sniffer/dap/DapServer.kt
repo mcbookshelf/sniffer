@@ -88,12 +88,14 @@ class DapServer : IDebugProtocolServer {
     override fun attach(args: Map<String, Any>): CompletableFuture<Void> {
         LOGGER.debug("Attach request received with arguments: {}", args)
         sendMessageToAllPlayers(ATTACHED_MESSAGE)
+        LogForwarder.start(::sendOutput)
         return CompletableFuture.completedFuture(null)
     }
 
     override fun disconnect(args: DisconnectArguments): CompletableFuture<Void> {
         LOGGER.debug("Disconnect request received with arguments: {}", args)
         sendMessageToAllPlayers(DISCONNECTED_MESSAGE)
+        LogForwarder.stop()
         if (SteppingState.isDebugging) {
             dispatchAction(ContinueInput, "disconnect")
         }
@@ -327,6 +329,7 @@ class DapServer : IDebugProtocolServer {
 
     fun exit() {
         LOGGER.debug("exit called")
+        LogForwarder.stop()
         val c = client ?: run {
             LOGGER.warn("Cannot send exited event: client is null")
             return
@@ -342,6 +345,17 @@ class DapServer : IDebugProtocolServer {
         }
     }
 
+
+    /**
+     * Sends one line of the game log to the client, which shows it in its debug console.
+     */
+    private fun sendOutput(line: String) {
+        val c = client ?: return
+        c.output(OutputEventArguments().apply {
+            category = OutputEventArgumentsCategory.STDOUT
+            output = line
+        })
+    }
 
     /**
      * Runs [block] on the Minecraft server thread and completes the returned future with its result.

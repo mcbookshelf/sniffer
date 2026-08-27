@@ -39,6 +39,7 @@ import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.StepInArguments
 import org.eclipse.lsp4j.debug.StepOutArguments
+import org.slf4j.LoggerFactory
 
 /**
  * The Debug Adapter Protocol as an editor speaks it to the mod, over a real WebSocket.
@@ -66,6 +67,32 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
             .thenAwaitEvent("initialized", events.initialized)
             .thenRequest("attach", { dap.attach(emptyMap()) })
             .thenRequest("configurationDone", { dap.configurationDone(ConfigurationDoneArguments()) })
+            .thenSucceedAndClose()
+    }
+
+    /**
+     * Attaching mirrors the game log to the client, which shows it in its debug console.
+     *
+     * The line is written through the logging backend the game itself writes to rather than through the mod,
+     * since what has to be proven is that any line reaches the client, not just the ones Sniffer produces.
+     * It travels on a thread of the forwarder's own, so the wait is for it to turn up rather than for it to have already turned up.
+     */
+    @GameTest(environment = "sniffer_test:dap_log_forwarding", maxTicks = MAX_TICKS)
+    fun theGameLogIsMirroredToAnAttachedClient(helper: GameTestHelper) {
+        DebugSession(helper)
+        val dap = initDapClient()
+        val marker = "log forwarding marker ${System.nanoTime()}"
+
+        helper.startSequence()
+            .thenRequest("initialize", { dap.initialize(InitializeRequestArguments()) })
+            .thenRequest("attach", { dap.attach(emptyMap()) })
+            .thenExecute { LoggerFactory.getLogger("sniffer_test").info(marker) }
+            .thenWaitUntil {
+                assertTrue(
+                    events.output.any { marker in (it.output ?: "") },
+                    "The logged line has not reached the client yet",
+                )
+            }
             .thenSucceedAndClose()
     }
 
