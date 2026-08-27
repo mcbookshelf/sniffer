@@ -1,0 +1,36 @@
+name: ✨ Feature Request
+description: Suggest a new feature or improvement.
+type: ✨ Feature
+body:
+  - type: dropdown
+    attributes:
+      label: 🗂️ Request Type
+      description: |
+        What part of Sniffer would this feature live in?
+      options:
+        - Debugger (breakpoints, stepping, inspection)
+        - In game command or `#!` directive
+        - VS Code extension
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 🧩 Feature Name
+      description: |
+        Enter a name for the feature (e.g., `data breakpoints`, `#!profile`, `watch expressions`).
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 📝 Description
+      description: |
+        Provide a clear explanation of what the feature should do and why it's useful.
+      placeholder: |
+        Examples:
+        - Pause the execution when a scoreboard value changes.
+        - Show the entities selected by the current command while paused.
+    validations:
+      required: true

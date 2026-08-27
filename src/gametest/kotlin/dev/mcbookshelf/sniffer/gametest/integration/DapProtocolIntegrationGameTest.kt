@@ -39,6 +39,8 @@ import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.StepInArguments
 import org.eclipse.lsp4j.debug.StepOutArguments
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.core.config.Configurator
 import org.slf4j.LoggerFactory
 
 /**
@@ -73,24 +75,41 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
     /**
      * Attaching mirrors the game log to the client, which shows it in its debug console.
      *
-     * The line is written through the logging backend the game itself writes to rather than through the mod,
+     * The lines are written through the logging backend the game itself writes to rather than through the mod,
      * since what has to be proven is that any line reaches the client, not just the ones Sniffer produces.
-     * It travels on a thread of the forwarder's own, so the wait is for it to turn up rather than for it to have already turned up.
+     * They travel on a thread of the forwarder's own, so the wait is for one to turn up rather than for it to have already turned up.
+     *
+     * Only what a server writes to its log file is mirrored, so the debug line is expected to be dropped and the info one kept.
      */
     @GameTest(environment = "sniffer_test:dap_log_forwarding", maxTicks = MAX_TICKS)
     fun theGameLogIsMirroredToAnAttachedClient(helper: GameTestHelper) {
         DebugSession(helper)
         val dap = initDapClient()
-        val marker = "log forwarding marker ${System.nanoTime()}"
+        val run = System.nanoTime()
+        val marker = "log forwarding marker $run"
+        val chatter = "log forwarding chatter $run"
 
         helper.startSequence()
             .thenRequest("initialize", { dap.initialize(InitializeRequestArguments()) })
             .thenRequest("attach", { dap.attach(emptyMap()) })
-            .thenExecute { LoggerFactory.getLogger("sniffer_test").info(marker) }
+            .thenExecute {
+                // Without this the debug line would never reach the appender at all, and the forwarder's own filter would go untested.
+                Configurator.setLevel(TEST_LOGGER, Level.DEBUG)
+                val logger = LoggerFactory.getLogger(TEST_LOGGER)
+                logger.debug(chatter)
+                // Logged last, so its arrival proves the line before it has been dealt with, kept or dropped.
+                logger.info(marker)
+            }
             .thenWaitUntil {
                 assertTrue(
                     events.output.any { marker in (it.output ?: "") },
                     "The logged line has not reached the client yet",
+                )
+            }
+            .thenExecute {
+                assertFalse(
+                    events.output.any { chatter in (it.output ?: "") },
+                    "A line below INFO should be filtered out",
                 )
             }
             .thenSucceedAndClose()
@@ -1140,5 +1159,8 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
          * Generous, because every wait here is on wall clock work (a WebSocket round trip, a resume scheduled for the next tick) while a game test server ticks as fast as it can.
          */
         const val MAX_TICKS = 100_000
+
+        /** A logger of the test's own, so raising its level to reach the forwarder's filter leaves every other logger alone. */
+        const val TEST_LOGGER = "sniffer_test"
     }
 }
