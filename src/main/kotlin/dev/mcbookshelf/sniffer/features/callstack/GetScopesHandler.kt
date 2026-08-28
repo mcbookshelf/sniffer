@@ -1,11 +1,9 @@
 package dev.mcbookshelf.sniffer.features.callstack
 
-import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
-import dev.mcbookshelf.sniffer.features.callstack.GetScopesInput
-import dev.mcbookshelf.sniffer.features.callstack.ScopesOutput
+import dev.mcbookshelf.sniffer.features.source.FunctionIdentity
 
 /**
  * Returns the variable scopes of a stack frame.
@@ -29,8 +27,7 @@ class GetScopesHandler(
             id = scope.id,
             name = "Function",
             variableCount = scopeManager.getVariables(scope.id).orElse(emptyList()).size,
-            functionName = scope.function,
-            path = scope.path,
+            identity = scope.identity,
         )
         return ScopesOutput(listOf(data))
     }
@@ -39,7 +36,6 @@ class GetScopesHandler(
         id = 0,
         name = "Function",
         variableCount = 0,
-        functionName = "",
-        path = null,
+        identity = FunctionIdentity("", null),
     )
 }

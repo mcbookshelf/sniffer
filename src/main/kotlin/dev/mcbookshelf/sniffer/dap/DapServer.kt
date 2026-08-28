@@ -4,6 +4,7 @@ import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.IInput
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
+import dev.mcbookshelf.sniffer.features.source.FunctionIdentity
 import dev.mcbookshelf.sniffer.features.source.RealPath
 import dev.mcbookshelf.sniffer.features.stepping.SteppingState
 import dev.mcbookshelf.sniffer.features.variables.VariableNode
@@ -234,9 +235,9 @@ class DapServer : IDebugProtocolServer {
             val frames = output.frames.map { data ->
                 StackFrame().apply {
                     id = data.id
-                    name = data.functionName
+                    name = data.identity.minecraftPath
                     line = data.line + 1
-                    source = toSource(data.functionName, data.path)
+                    source = toSource(data.identity)
                 }
             }
 
@@ -273,7 +274,7 @@ class DapServer : IDebugProtocolServer {
                     presentationHint = "locals"
                     namedVariables = data.variableCount
                     variablesReference = data.id
-                    source = toSource(data.functionName, data.path)
+                    source = toSource(data.identity)
                 }
             }
 
@@ -407,16 +408,18 @@ class DapServer : IDebugProtocolServer {
         }
     }
 
-    private fun toSource(functionName: String, path: RealPath?): Source {
+    private fun toSource(identity: FunctionIdentity): Source {
         val source = Source().apply {
-            name = functionName
+            name = identity.minecraftPath
         }
-        if (path != null) {
-            when (path.kind) {
-                RealPath.Kind.DIRECTORY -> source.path = path.path
+        val real = identity.realPath
+        if (real != null) {
+            when (real.kind) {
+                RealPath.Kind.DIRECTORY -> source.path = real.path
                 RealPath.Kind.ZIP -> {
-                    source.sourceReference = zipSourceReferences.getOrPut(functionName) { nextZipSourceReference++ }
-                    source.path = path.path
+                    source.sourceReference =
+                        zipSourceReferences.getOrPut(identity.minecraftPath) { nextZipSourceReference++ }
+                    source.path = real.path
                 }
             }
         }
