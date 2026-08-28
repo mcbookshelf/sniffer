@@ -26,7 +26,7 @@ import net.minecraft.server.commands.data.StorageDataAccessor
  *
  * @author Alumopper
  */
-class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
+class DataArgumentType: ArgumentType<DataArgumentType.Data> {
 
     override fun parse(reader: StringReader): Data {
         reader.skipWhitespace()
@@ -60,45 +60,46 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
         return Data(dataSource)
     }
 
+    class Data(val data: DataSource): DebugData {
+        override fun get(source: CommandSourceStack): Any {
+            return data.getNbtElement(source)
+        }
+    }
+
+    interface DataSource {
+            fun getNbtElement(source: CommandSourceStack): Tag
+    }
+
+    private class EntityDataSource(val selector: EntitySelector, val path: NbtPathArgument.NbtPath) : DataSource {
+        override fun getNbtElement(source: CommandSourceStack): Tag {
+            return DataCommands.getSingleTag(path, EntityDataAccessor(selector.findSingleEntity(source)))
+        }
+    }
+
+    private class BlockDataSource(val pos: Coordinates, val path: NbtPathArgument.NbtPath): DataSource {
+        override fun getNbtElement(source: CommandSourceStack): Tag {
+            val blockPos = pos.getBlockPos(source)
+            val world = source.level
+            if (!world.isLoaded(blockPos)) {
+                throw BlockPosArgument.ERROR_NOT_LOADED.create()
+            } else if (!world.isOutsideBuildHeight(blockPos)) {
+                throw BlockPosArgument.ERROR_OUT_OF_WORLD.create()
+            }
+            val blockEntity = source.level.getBlockEntity(blockPos) ?: throw INVALID_BLOCK_EXCEPTION.create()
+            return DataCommands.getSingleTag(path, BlockDataAccessor(blockEntity, blockPos))
+        }
+    }
+
+    private class StorageDataSource(val id: Identifier, val path: NbtPathArgument.NbtPath): DataSource {
+        override fun getNbtElement(source: CommandSourceStack): Tag {
+            return DataCommands.getSingleTag(path, StorageDataAccessor(source.server.commandStorage, id))
+        }
+    }
+
     companion object {
 
         private val INVALID_OBJECT_ERROR = SimpleCommandExceptionType { "Invalid object type for data argument" }
         val INVALID_BLOCK_EXCEPTION = SimpleCommandExceptionType(Component.translatable("commands.data.block.invalid"))
 
-        class Data(val data: DataSource): DebugData {
-            override fun get(source: CommandSourceStack): Any {
-                return data.getNbtElement(source)
-            }
-        }
-
-        interface DataSource {
-                fun getNbtElement(source: CommandSourceStack): Tag
-        }
-
-        private class EntityDataSource(val selector: EntitySelector, val path: NbtPathArgument.NbtPath) : DataSource {
-            override fun getNbtElement(source: CommandSourceStack): Tag {
-                return DataCommands.getSingleTag(path, EntityDataAccessor(selector.findSingleEntity(source)))
-            }
-        }
-
-        private class BlockDataSource(val pos: Coordinates, val path: NbtPathArgument.NbtPath): DataSource {
-            override fun getNbtElement(source: CommandSourceStack): Tag {
-                val blockPos = pos.getBlockPos(source)
-                val world = source.level
-                if (!world.isLoaded(blockPos)) {
-                    throw BlockPosArgument.ERROR_NOT_LOADED.create()
-                } else if (!world.isOutsideBuildHeight(blockPos)) {
-                    throw BlockPosArgument.ERROR_OUT_OF_WORLD.create()
-                }
-                val blockEntity = source.level.getBlockEntity(blockPos) ?: throw INVALID_BLOCK_EXCEPTION.create()
-                return DataCommands.getSingleTag(path, BlockDataAccessor(blockEntity, blockPos))
-            }
-        }
-
-        private class StorageDataSource(val id: Identifier, val path: NbtPathArgument.NbtPath): DataSource {
-            override fun getNbtElement(source: CommandSourceStack): Tag {
-                return DataCommands.getSingleTag(path, StorageDataAccessor(source.server.commandStorage, id))
-            }
-        }
     }
 }
