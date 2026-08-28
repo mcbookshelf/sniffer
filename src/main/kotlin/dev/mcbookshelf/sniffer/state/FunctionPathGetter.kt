@@ -1,8 +1,9 @@
 package dev.mcbookshelf.sniffer.state
 
-import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener
 import dev.mcbookshelf.sniffer.accessor.FilePackResourcesAccessor
 import dev.mcbookshelf.sniffer.accessor.PathPackResourcesAccessor
+import dev.mcbookshelf.sniffer.domain.RealPath
+import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener
 import net.minecraft.resources.Identifier
 import net.minecraft.server.packs.FilePackResources
 import net.minecraft.server.packs.PackType

@@ -165,5 +165,5 @@ object BreakPointCommand {
     }
 
     private fun dispatch(input: IInput, source: CommandSourceStack): Output =
-        SnifferDispatcher.get().dispatch(input, Context(source, source.server))
+        SnifferDispatcher.get().dispatch(input, Context(source))
 }

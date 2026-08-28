@@ -3,7 +3,7 @@ package dev.mcbookshelf.sniffer.state
 import com.mojang.brigadier.ParseResults
 import com.mojang.brigadier.context.ContextChain
 import com.mojang.brigadier.exceptions.CommandSyntaxException
-import dev.mcbookshelf.sniffer.mixin.CommandsAccessor
+import dev.mcbookshelf.sniffer.util.IsolatedExecution
 import net.minecraft.commands.CommandResultCallback
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
@@ -130,17 +130,13 @@ object BreakpointManager {
         val command = Commands.trimOptionalPrefix(raw.trim())
         val parse = validateRunnable(commands.dispatcher.parse(command, conditionSource), command)
 
-        val contextHolder = CommandsAccessor.getCurrentExecutionContext()
-        val outerContext = contextHolder.get()
-        contextHolder.set(null)
         // Restored rather than cleared, since the condition may have run a `/breakpoint` of its own.
         val outerEvaluating = evaluatingCondition
         evaluatingCondition = true
         try {
-            commands.performCommand(parse, command)
+            IsolatedExecution.outsideCurrentContext { commands.performCommand(parse, command) }
         } finally {
             evaluatingCondition = outerEvaluating
-            contextHolder.set(outerContext)
         }
         return success.get()
     }

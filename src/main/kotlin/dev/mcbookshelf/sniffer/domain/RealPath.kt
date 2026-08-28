@@ -1,4 +1,4 @@
-package dev.mcbookshelf.sniffer.state
+package dev.mcbookshelf.sniffer.domain
 
 /**
  * Where a loaded `.mcfunction` file lives on disk.

@@ -1,19 +1,18 @@
 package dev.mcbookshelf.sniffer.dap
 
-import dev.mcbookshelf.sniffer.state.RealPath
-import dev.mcbookshelf.sniffer.state.VariableNode
-import dev.mcbookshelf.sniffer.util.Extension.addSnifferPrefix
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.IInput
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
+import dev.mcbookshelf.sniffer.domain.RealPath
 import dev.mcbookshelf.sniffer.input.*
 import dev.mcbookshelf.sniffer.output.*
 import dev.mcbookshelf.sniffer.state.DebugEventBus
 import dev.mcbookshelf.sniffer.state.ServerReference
-import org.eclipse.lsp4j.debug.*
-import org.eclipse.lsp4j.debug.Thread
 import dev.mcbookshelf.sniffer.state.SteppingState
+import dev.mcbookshelf.sniffer.state.VariableNode
+import dev.mcbookshelf.sniffer.util.Extension.addSnifferPrefix
+import org.eclipse.lsp4j.debug.*
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.slf4j.LoggerFactory
@@ -383,7 +382,7 @@ class DapServer : IDebugProtocolServer {
 
     private fun dispatch(input: IInput): Output {
         val source = ServerReference.getCommandSource()
-        return SnifferDispatcher.get().dispatch(input, Context(source, ServerReference.get()))
+        return SnifferDispatcher.get().dispatch(input, Context(source))
     }
 
     private fun dispatchAction(input: IInput, label: String) {

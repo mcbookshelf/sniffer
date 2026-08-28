@@ -26,7 +26,7 @@ object DebugModeCommand {
                             .executes { context ->
                                 SnifferDispatcher.get().dispatch(
                                     SetDebugModeInput(true),
-                                    Context(context.source, context.source.server)
+                                    Context(context.source)
                                 )
                                 context.source.sendSuccess(
                                     { Component.translatable("sniffer.commands.debugmode.enable") },
@@ -40,7 +40,7 @@ object DebugModeCommand {
                             .executes { context ->
                                 SnifferDispatcher.get().dispatch(
                                     SetDebugModeInput(false),
-                                    Context(context.source, context.source.server)
+                                    Context(context.source)
                                 )
                                 context.source.sendSuccess(
                                     { Component.translatable("sniffer.commands.debugmode.disable") },

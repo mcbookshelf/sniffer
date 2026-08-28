@@ -29,7 +29,7 @@ class GetScopesHandler(
         val data = ScopeData(
             id = scope.id,
             name = "Function",
-            variableCount = scope.rootVariables().size,
+            variableCount = scopeManager.getVariables(scope.id).orElse(emptyList()).size,
             functionName = scope.function,
             path = scope.path,
         )

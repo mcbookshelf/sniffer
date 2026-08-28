@@ -245,7 +245,7 @@ class WebSocketServer : Endpoint() {
         // The server may already be gone if the close is part of shutdown.
         runCatching { ServerReference.get() }.getOrNull()?.let { server ->
             if (SteppingState.isDebugging) {
-                SnifferDispatcher.get().dispatch(ContinueInput, Context(server.createCommandSourceStack(), server))
+                SnifferDispatcher.get().dispatch(ContinueInput, Context(server.createCommandSourceStack()))
             }
         }
         SteppingState.resetAll()
