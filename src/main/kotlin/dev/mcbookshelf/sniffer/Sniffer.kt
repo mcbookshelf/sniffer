@@ -28,6 +28,8 @@ import org.glassfish.tyrus.server.Server
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.util.logging.LogManager
+import dev.mcbookshelf.sniffer.expression.ExprArgumentType
+import dev.mcbookshelf.sniffer.expression.LogArgumentType
 
 /**
  * Entrypoint of the mod, wiring the debugger to the server lifecycle.

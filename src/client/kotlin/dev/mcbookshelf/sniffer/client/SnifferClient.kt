@@ -72,7 +72,7 @@ class SnifferClient : ClientModInitializer {
                 val player = client.player ?: continue
                 val level = server.getLevel(player.level().dimension()) ?: continue
                 val source = player.createCommandSourceStackForNameResolution(level)
-                SnifferDispatcher.get().dispatch(StepInInput(1), Context(source, server))
+                SnifferDispatcher.get().dispatch(StepInInput(1), Context(source))
             }
         }
 

@@ -2,7 +2,6 @@ package dev.mcbookshelf.sniffer.expressions
 
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.exceptions.CommandSyntaxException
-import dev.mcbookshelf.sniffer.commands.ExprArgumentType
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.nbt.ByteTag
 import net.minecraft.nbt.DoubleTag
@@ -14,6 +13,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import dev.mcbookshelf.sniffer.expression.ExprArgumentType
+import dev.mcbookshelf.sniffer.expression.PlainData
 
 /**
  * What a `{ ... }` expression means once parsed: which tag each operator yields, and which pairs of tags it refuses.
