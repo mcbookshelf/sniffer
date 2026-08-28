@@ -17,12 +17,13 @@ import java.util.concurrent.CompletableFuture
 object BreakpointSuggestionProvider : SuggestionProvider<CommandSourceStack> {
 
     override fun getSuggestions(c: CommandContext<CommandSourceStack>, builder: SuggestionsBuilder): CompletableFuture<Suggestions> {
-        val scope = ScopeManager.get().currentScope
+        val manager = ScopeManager.get()
+        val scope = manager.currentScope
         if (scope.isEmpty) {
             return builder.buildFuture()
         }
         return try {
-            val variables = scope.get().rootVariables()
+            val variables = manager.getVariables(scope.get().id).orElse(emptyList())
             for (variable in variables) {
                 builder.suggest(variable.name)
             }

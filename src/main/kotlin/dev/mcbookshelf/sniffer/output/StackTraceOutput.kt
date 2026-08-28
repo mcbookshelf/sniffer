@@ -1,7 +1,7 @@
 package dev.mcbookshelf.sniffer.output
 
-import dev.mcbookshelf.sniffer.state.RealPath
 import dev.mcbookshelf.sniffer.dispatch.Output
+import dev.mcbookshelf.sniffer.domain.RealPath
 
 /**
  * Result of a paginated stack trace query.

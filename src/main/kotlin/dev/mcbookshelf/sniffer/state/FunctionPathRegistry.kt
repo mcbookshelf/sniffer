@@ -1,8 +1,9 @@
 package dev.mcbookshelf.sniffer.state
 
+import dev.mcbookshelf.sniffer.domain.RealPath
 import net.minecraft.resources.Identifier
 import java.nio.file.Path
-import java.util.Optional
+import java.util.*
 
 /**
  * Maps a function location to the file it was loaded from.

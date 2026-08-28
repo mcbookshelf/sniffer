@@ -146,7 +146,7 @@ class DebugSession(val helper: GameTestHelper) {
     fun callStack(): List<String> = ScopeManager.get().debugScopes.map { it.function }
 
     private fun dispatch(input: IInput) {
-        SnifferDispatcher.get().dispatch(input, Context(source, server))
+        SnifferDispatcher.get().dispatch(input, Context(source))
     }
 
     private companion object {

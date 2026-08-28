@@ -1,8 +1,16 @@
 package dev.mcbookshelf.sniffer.state
 
+import dev.mcbookshelf.sniffer.domain.DebugScope
 import net.minecraft.commands.ExecutionCommandSource
 import net.minecraft.nbt.CompoundTag
 import java.util.Optional
+import kotlin.collections.ArrayDeque
+import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.forEach
+import kotlin.collections.listOf
+import kotlin.collections.reversed
+import kotlin.collections.set
 
 /**
  * Owns the stack of debug scopes, which is the call hierarchy, and routes variable lookups to [VariableRegistry].
@@ -17,46 +25,6 @@ class ScopeManager private constructor() {
 
     val registry: VariableRegistry = VariableRegistry()
 
-    /**
-     * One entry of the call hierarchy, holding the function being run and the state to inspect it.
-     * Its [VariableNode] has the executor, the location and the macro arguments as lazily built children.
-     *
-     * @param parent the scope that called this one, `null` at the bottom of the stack
-     * @param function the `namespace:path` of the running function
-     * @param executor the source the function runs as
-     * @param macroVariables the arguments the function was instantiated with, `null` when it is not a macro
-     */
-    class DebugScope internal constructor(
-        private val parent: DebugScope?,
-        val function: String,
-        val executor: ExecutionCommandSource<*>,
-        val macroVariables: CompoundTag?,
-        private val registry: VariableRegistry,
-    ) {
-        val path: RealPath? = FunctionPathRegistry.getRealPath(function)
-        var line: Int = -2
-
-        private val node: VariableNode = registry.register { id ->
-            VariableNode(id, "Function", function, isRoot = false) { reg ->
-                VariableManager.buildRootVariables(executor, macroVariables, reg)
-            }
-        }
-
-        val id: Int get() = node.id
-
-        fun rootVariables(): List<VariableNode> = node.children(registry)
-
-        fun invalidate() = node.invalidate(registry)
-
-        val callerFunction: Optional<String>
-            get() = Optional.ofNullable(parent).map { it.function }
-
-        val callerLine: Optional<Int>
-            get() = Optional.ofNullable(parent).map { it.line }
-
-        fun getOptionalPath(): Optional<RealPath> = Optional.ofNullable(path)
-    }
-
     private val stack = ArrayDeque<DebugScope>()
     private val scopesById = HashMap<Int, DebugScope>()
     private var _currentScope: DebugScope? = null
@@ -67,7 +35,15 @@ class ScopeManager private constructor() {
 
     @JvmOverloads
     fun newScope(function: String, executor: ExecutionCommandSource<*>, macroVariables: CompoundTag? = null) {
-        val scope = DebugScope(_currentScope, function, executor, macroVariables, registry)
+        val node = registry.register { id ->
+            VariableNode(id, "Function", function, isRoot = false) { reg ->
+                VariableManager.buildRootVariables(executor, macroVariables, reg)
+            }
+        }
+        val scope = DebugScope(
+            _currentScope, function, executor, macroVariables,
+            FunctionPathRegistry.getRealPath(function), node.id,
+        )
         stack.addLast(scope)
         scopesById[scope.id] = scope
         _currentScope = scope
@@ -75,7 +51,7 @@ class ScopeManager private constructor() {
 
     fun unscope() {
         val top = stack.removeLastOrNull() ?: return
-        top.invalidate()
+        invalidate(top)
         registry.drop(listOf(top.id))
         scopesById.remove(top.id)
         _currentScope = stack.lastOrNull()
@@ -111,7 +87,12 @@ class ScopeManager private constructor() {
      * Called right before a pause.
      */
     fun refreshForPause() {
-        for (scope in stack) scope.invalidate()
+        for (scope in stack) invalidate(scope)
+    }
+
+    /** Drops the memoized variables of [scope], keeping its own node registered. */
+    private fun invalidate(scope: DebugScope) {
+        registry.get(scope.id)?.invalidate(registry)
     }
 
     val debugScopes: List<DebugScope>
