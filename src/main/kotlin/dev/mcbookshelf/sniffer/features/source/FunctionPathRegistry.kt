@@ -22,7 +22,8 @@ object FunctionPathRegistry {
     fun getPath(mcpath: String): Optional<String> =
         Optional.ofNullable(paths[mcpath]).map { it.path }
 
-    fun getRealPath(mcpath: String): RealPath? = paths[mcpath]
+    /** Pairs [mcpath] with the file it was loaded from, so the two never travel apart. */
+    fun identify(mcpath: String): FunctionIdentity = FunctionIdentity(mcpath, paths[mcpath])
 
     fun clear() {
         paths.clear()

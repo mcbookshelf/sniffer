@@ -1,11 +1,8 @@
 package dev.mcbookshelf.sniffer.features.callstack
 
-import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
-import dev.mcbookshelf.sniffer.features.callstack.GetStackTraceInput
-import dev.mcbookshelf.sniffer.features.callstack.StackTraceOutput
 import kotlin.math.min
 
 /**
@@ -32,9 +29,8 @@ class GetStackTraceHandler(
             val isHead = start + index == 0
             StackFrameData(
                 id = scope.id,
-                functionName = if (isHead) headFunctionName() else scope.function,
+                identity = scope.identity,
                 line = if (isHead) headLine() else scope.line,
-                path = scope.path,
             )
         }
 
@@ -43,7 +39,4 @@ class GetStackTraceHandler(
 
     private fun headLine(): Int =
         scopeManager.currentScope.map { it.line }.orElse(0)
-
-    private fun headFunctionName(): String =
-        scopeManager.currentScope.map { it.function }.orElse("")
 }

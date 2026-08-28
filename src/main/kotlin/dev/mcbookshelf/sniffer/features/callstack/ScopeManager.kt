@@ -45,8 +45,8 @@ class ScopeManager private constructor() {
             }
         }
         val scope = DebugScope(
-            _currentScope, function, executor, macroVariables,
-            FunctionPathRegistry.getRealPath(function), node.id,
+            _currentScope, FunctionPathRegistry.identify(function),
+            executor, macroVariables, node.id,
         )
         stack.addLast(scope)
         scopesById[scope.id] = scope
