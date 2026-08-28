@@ -3,7 +3,7 @@ package dev.mcbookshelf.sniffer.client
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
 import dev.mcbookshelf.sniffer.client.state.ClientConnectionState
 import dev.mcbookshelf.sniffer.client.state.ClientDebuggingState
-import dev.mcbookshelf.sniffer.state.DebugToggles
+import dev.mcbookshelf.sniffer.features.debugmode.DebugToggles
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.renderer.RenderPipelines

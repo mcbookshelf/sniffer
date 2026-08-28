@@ -1,7 +1,7 @@
 package dev.mcbookshelf.sniffer.mixin;
 
 import dev.mcbookshelf.sniffer.accessor.FrameUniqueAccessor;
-import dev.mcbookshelf.sniffer.state.ScopeManager;
+import dev.mcbookshelf.sniffer.features.callstack.ScopeManager;
 import net.minecraft.commands.execution.Frame;
 import net.minecraft.commands.functions.InstantiatedFunction;
 import org.spongepowered.asm.mixin.Mixin;

@@ -7,7 +7,7 @@ import dev.mcbookshelf.sniffer.gametest.support.assertThat
 import dev.mcbookshelf.sniffer.gametest.support.assertTrue
 import dev.mcbookshelf.sniffer.gametest.support.thenAwaitDapReady
 import dev.mcbookshelf.sniffer.gametest.support.thenAwaitEvent
-import dev.mcbookshelf.sniffer.state.StepType
+import dev.mcbookshelf.sniffer.features.stepping.StepType
 import net.fabricmc.fabric.api.gametest.v1.GameTest
 import net.minecraft.core.BlockPos
 import net.minecraft.gametest.framework.GameTestHelper

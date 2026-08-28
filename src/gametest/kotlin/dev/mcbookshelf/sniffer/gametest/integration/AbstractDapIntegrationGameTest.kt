@@ -3,7 +3,7 @@ package dev.mcbookshelf.sniffer.gametest.integration
 import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dap.WebSocketOutputStream
 import dev.mcbookshelf.sniffer.dap.WebSocketServer
-import dev.mcbookshelf.sniffer.state.ConnectionState
+import dev.mcbookshelf.sniffer.dap.ConnectionState
 import jakarta.websocket.ClientEndpointConfig
 import jakarta.websocket.CloseReason
 import jakarta.websocket.Endpoint

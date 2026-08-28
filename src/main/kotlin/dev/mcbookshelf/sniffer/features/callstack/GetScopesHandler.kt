@@ -1,0 +1,45 @@
+package dev.mcbookshelf.sniffer.features.callstack
+
+import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
+import dev.mcbookshelf.sniffer.dispatch.Context
+import dev.mcbookshelf.sniffer.dispatch.Handler
+import dev.mcbookshelf.sniffer.dispatch.Output
+import dev.mcbookshelf.sniffer.features.callstack.GetScopesInput
+import dev.mcbookshelf.sniffer.features.callstack.ScopesOutput
+
+/**
+ * Returns the variable scopes of a stack frame.
+ * Every frame exposes a single `Function` scope, holding the command source variables and the macro arguments.
+ *
+ * @author theogiraudet
+ */
+class GetScopesHandler(
+    private val scopeManager: ScopeManager,
+) : Handler<GetScopesInput> {
+
+    override val inputType = GetScopesInput::class
+
+    override fun handle(input: GetScopesInput, ctx: Context): Output {
+        if (scopeManager.isEmpty()) return ScopesOutput(listOf(emptyScopeData()))
+
+        val scope = scopeManager.getScope(input.frameId).orElse(null)
+            ?: return ScopesOutput(listOf(emptyScopeData()))
+
+        val data = ScopeData(
+            id = scope.id,
+            name = "Function",
+            variableCount = scopeManager.getVariables(scope.id).orElse(emptyList()).size,
+            functionName = scope.function,
+            path = scope.path,
+        )
+        return ScopesOutput(listOf(data))
+    }
+
+    private fun emptyScopeData() = ScopeData(
+        id = 0,
+        name = "Function",
+        variableCount = 0,
+        functionName = "",
+        path = null,
+    )
+}
