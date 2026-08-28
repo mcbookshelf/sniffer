@@ -18,6 +18,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.util.CommonColors
 import org.slf4j.Logger
+import dev.mcbookshelf.sniffer.expression.ExprArgumentType
 
 /**
  * The `/assert` command, which evaluates an expression and reports the call stack when it does not hold.

@@ -6,6 +6,8 @@ import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
 import net.minecraft.server.permissions.Permissions
 import net.minecraft.network.chat.Component
+import dev.mcbookshelf.sniffer.expression.DebugData
+import dev.mcbookshelf.sniffer.expression.LogArgumentType
 
 /**
  * The `/log` command, which evaluates a log expression and broadcasts the result to every player.

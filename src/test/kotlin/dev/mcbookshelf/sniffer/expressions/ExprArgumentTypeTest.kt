@@ -1,9 +1,9 @@
 package dev.mcbookshelf.sniffer.expressions
 
 import com.mojang.brigadier.StringReader
-import dev.mcbookshelf.sniffer.commands.ExprArgumentType
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
+import dev.mcbookshelf.sniffer.expression.ExprArgumentType
 
 /**
  * Where `ExprArgumentType` stops reading a `{ ... }` expression off a command line.

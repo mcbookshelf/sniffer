@@ -1,8 +1,6 @@
 package dev.mcbookshelf.sniffer.state
 
 import com.mojang.brigadier.StringReader
-import dev.mcbookshelf.sniffer.commands.DebugData
-import dev.mcbookshelf.sniffer.commands.ExprArgumentType
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.ExecutionCommandSource
 import net.minecraft.nbt.CompoundTag
@@ -14,6 +12,8 @@ import net.minecraft.world.level.storage.TagValueOutput
 import net.minecraft.world.phys.Vec2
 import net.minecraft.world.phys.Vec3
 import java.text.MessageFormat
+import dev.mcbookshelf.sniffer.expression.DebugData
+import dev.mcbookshelf.sniffer.expression.ExprArgumentType
 
 /**
  * Produces the lazy [VariableNode] trees a debug scope exposes.
