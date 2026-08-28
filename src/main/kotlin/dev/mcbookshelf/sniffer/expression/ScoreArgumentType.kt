@@ -16,7 +16,7 @@ import net.minecraft.network.chat.Component
  *
  * @author Alumopper
  */
-class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
+class ScoreArgumentType: ArgumentType<ScoreArgumentType.Score> {
 
     @Suppress("unused", "PrivatePropertyName")
     private val EXAMPLES = listOf("{score @s test}", "{score player objective}")
@@ -36,31 +36,31 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
         return Score(scoreHolder, objective)
     }
 
-    companion object {
-        class Score (
-            val scoreHolder: ScoreHolderArgument.Result,
-            val objective: String
-        ): DebugData {
-            override fun get(source: CommandSourceStack): Any {
-                val scoreboard = source.server.scoreboard
-                val holder = scoreHolder.getNames(source) { ArrayList() }.last()
-                val scoreboardObjective = scoreboard.getObjective(objective)
-                    ?: throw DynamicCommandExceptionType {
-                        Component.translatable("arguments.objective.notFound", *arrayOf(it))
-                    }.create(objective)
-                val readableScoreboardScore = scoreboard.getOrCreatePlayerScore(holder, scoreboardObjective)
-                if (readableScoreboardScore == null) {
-                    throw PLAYERS_GET_NULL_EXCEPTION.create(
-                        scoreboardObjective.name,
-                        holder.displayName
-                    )
-                } else {
-                    return IntTag.valueOf(readableScoreboardScore.get())
-                }
+    class Score (
+        val scoreHolder: ScoreHolderArgument.Result,
+        val objective: String
+    ): DebugData {
+        override fun get(source: CommandSourceStack): Any {
+            val scoreboard = source.server.scoreboard
+            val holder = scoreHolder.getNames(source) { ArrayList() }.last()
+            val scoreboardObjective = scoreboard.getObjective(objective)
+                ?: throw DynamicCommandExceptionType {
+                    Component.translatable("arguments.objective.notFound", *arrayOf(it))
+                }.create(objective)
+            val readableScoreboardScore = scoreboard.getOrCreatePlayerScore(holder, scoreboardObjective)
+            if (readableScoreboardScore == null) {
+                throw PLAYERS_GET_NULL_EXCEPTION.create(
+                    scoreboardObjective.name,
+                    holder.displayName
+                )
+            } else {
+                return IntTag.valueOf(readableScoreboardScore.get())
             }
-
         }
 
+    }
+
+    companion object {
         fun score(): ScoreArgumentType = ScoreArgumentType()
 
         private fun skipWhitespace(reader: StringReader) {

@@ -12,7 +12,7 @@ import dev.mcbookshelf.sniffer.util.Extension.test
  *
  * @author Alumopper
  */
-class LogArgumentType: ArgumentType<LogArgumentType.Companion.Log> {
+class LogArgumentType: ArgumentType<LogArgumentType.Log> {
     @Suppress("unused", "PrivatePropertyName")
     private val EXAMPLES = mutableListOf("hello {(some thing) == 1}")
 
@@ -30,9 +30,9 @@ class LogArgumentType: ArgumentType<LogArgumentType.Companion.Log> {
         return log
     }
 
-    companion object {
-        class Log(val logs: ArrayList<DebugData> = arrayListOf())
+    class Log(val logs: ArrayList<DebugData> = arrayListOf())
 
+    companion object {
         @JvmStatic
         fun getLog(context: CommandContext<*>, name: String?): Log {
             return context.getArgument(name, Log::class.java)

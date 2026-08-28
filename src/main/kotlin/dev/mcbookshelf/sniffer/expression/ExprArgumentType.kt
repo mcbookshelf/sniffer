@@ -20,7 +20,7 @@ import net.minecraft.network.chat.Component
  *
  * @author Alumopper
  */
-class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
+class ExprArgumentType: ArgumentType<ExprArgumentType.Experiment> {
 
     override fun parse(reader: StringReader): Experiment {
         val startIndex = reader.cursor
@@ -100,6 +100,29 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         return parsedData
     }
 
+    class Experiment(val first: DebugData?, val ops: List<Pair<String, DebugData>>, val content: String): DebugData {
+        override fun get(source: CommandSourceStack): Any {
+            var accumulator = first?.get(source)
+            for ((op, arg) in ops){
+                val argValue = arg.get(source)
+                if(op == "||" && accumulator is ByteTag && accumulator.value == 1.toByte()) continue
+                if(op == "&&" && accumulator is ByteTag && accumulator.value == 0.toByte()) continue
+                accumulator = supportedOps[op]!!.apply(accumulator, argValue)
+            }
+            return accumulator!!
+        }
+    }
+
+    abstract class Operation(val name: String){
+        abstract fun apply(left: Any?, right: Any): Any
+        override fun toString(): String {
+            return name
+        }
+        fun buildOperationTypeError(left: Any?, right: Any) = 
+            OPERATION_TYPE_ERROR.create(name, left?.javaClass?.simpleName, right.javaClass.simpleName)
+        
+    }
+
     companion object {
 
         @JvmStatic
@@ -108,19 +131,6 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         @JvmStatic
         fun getExpr(context: CommandContext<*>, name: String?): Experiment {
             return context.getArgument(name, Experiment::class.java)
-        }
-
-        class Experiment(val first: DebugData?, val ops: List<Pair<String, DebugData>>, val content: String): DebugData {
-            override fun get(source: CommandSourceStack): Any {
-                var accumulator = first?.get(source)
-                for ((op, arg) in ops){
-                    val argValue = arg.get(source)
-                    if(op == "||" && accumulator is ByteTag && accumulator.value == 1.toByte()) continue
-                    if(op == "&&" && accumulator is ByteTag && accumulator.value == 0.toByte()) continue
-                    accumulator = supportedOps[op]!!.apply(accumulator, argValue)
-                }
-                return accumulator!!
-            }
         }
 
         private val supportedOps = mapOf(
@@ -300,16 +310,6 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
                 }
             }
         )
-
-        abstract class Operation(val name: String){
-            abstract fun apply(left: Any?, right: Any): Any
-            override fun toString(): String {
-                return name
-            }
-            fun buildOperationTypeError(left: Any?, right: Any) = 
-                OPERATION_TYPE_ERROR.create(name, left?.javaClass?.simpleName, right.javaClass.simpleName)
-            
-        }
 
         private val EMPTY_EXPR_ERROR = SimpleCommandExceptionType { "Empty expression" }
         private val INVALID_ARG_ERROR = SimpleCommandExceptionType { "Invalid expression argument" }

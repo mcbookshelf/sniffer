@@ -11,7 +11,7 @@ import net.minecraft.commands.arguments.MessageArgument
  *
  * @author Alumopper
  */
-class EntityNameType: ArgumentType<EntityNameType.Companion.Name>{
+class EntityNameType: ArgumentType<EntityNameType.Name>{
     override fun parse(reader: StringReader): Name {
         reader.skipWhitespace()
         reader.expect("name")
@@ -20,12 +20,11 @@ class EntityNameType: ArgumentType<EntityNameType.Companion.Name>{
         return Name(name)
     }
 
-    companion object {
-        class Name(val msg: MessageArgument.Message): DebugData {
-            override fun get(source: CommandSourceStack): Any {
-                return msg.toComponent(source, true)
-            }
-
+    class Name(val msg: MessageArgument.Message): DebugData {
+        override fun get(source: CommandSourceStack): Any {
+            return msg.toComponent(source, true)
         }
+
     }
+
 }
