@@ -1,12 +1,12 @@
 package dev.mcbookshelf.sniffer.mixin;
 
 import dev.mcbookshelf.sniffer.accessor.UnboundUniqueAccessor;
-import dev.mcbookshelf.sniffer.state.BreakpointManager;
-import dev.mcbookshelf.sniffer.state.BreakpointTrigger;
-import dev.mcbookshelf.sniffer.state.PausedExecutionStore;
-import dev.mcbookshelf.sniffer.state.ScopeManager;
-import dev.mcbookshelf.sniffer.state.StepType;
-import dev.mcbookshelf.sniffer.state.SteppingState;
+import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointManager;
+import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointTrigger;
+import dev.mcbookshelf.sniffer.features.stepping.PausedExecutionStore;
+import dev.mcbookshelf.sniffer.features.callstack.ScopeManager;
+import dev.mcbookshelf.sniffer.features.stepping.StepType;
+import dev.mcbookshelf.sniffer.features.stepping.SteppingState;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.ExecutionContext;

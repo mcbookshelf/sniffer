@@ -1,0 +1,11 @@
+package dev.mcbookshelf.sniffer.features.evaluate
+
+import dev.mcbookshelf.sniffer.dispatch.IInput
+
+/**
+ * Evaluates a debug expression in the current scope.
+ *
+ * @property expression the expression to evaluate
+ * @author theogiraudet
+ */
+data class EvaluateInput(val expression: String) : IInput

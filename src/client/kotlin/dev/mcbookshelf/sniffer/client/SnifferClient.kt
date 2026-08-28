@@ -13,12 +13,12 @@ import dev.mcbookshelf.sniffer.client.state.ClientConnectionState
 import dev.mcbookshelf.sniffer.client.state.ClientDebuggingState
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
-import dev.mcbookshelf.sniffer.input.StepInInput
+import dev.mcbookshelf.sniffer.features.stepping.StepInInput
 import dev.mcbookshelf.sniffer.network.AuthPromptPayload
 import dev.mcbookshelf.sniffer.network.SetDapConnectedPayload
 import dev.mcbookshelf.sniffer.network.SetDebugModePayload
 import dev.mcbookshelf.sniffer.network.SetDebuggingPayload
-import dev.mcbookshelf.sniffer.state.DebugToggles
+import dev.mcbookshelf.sniffer.features.debugmode.DebugToggles
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.ClickEvent

@@ -7,7 +7,7 @@ import dev.mcbookshelf.sniffer.gametest.support.assertThat
 import dev.mcbookshelf.sniffer.gametest.support.assertTrue
 import dev.mcbookshelf.sniffer.gametest.support.debugModeSentTo
 import dev.mcbookshelf.sniffer.gametest.support.placePlayer
-import dev.mcbookshelf.sniffer.state.DebugModeState
+import dev.mcbookshelf.sniffer.features.debugmode.DebugModeState
 import net.fabricmc.fabric.api.gametest.v1.GameTest
 import net.minecraft.gametest.framework.GameTestHelper
 

@@ -10,8 +10,8 @@ import dev.mcbookshelf.sniffer.gametest.support.thenAwaitPrompt
 import dev.mcbookshelf.sniffer.gametest.support.thenAwaitRefusal
 import dev.mcbookshelf.sniffer.gametest.support.thenRequest
 import dev.mcbookshelf.sniffer.gametest.support.thenWaitMillis
-import dev.mcbookshelf.sniffer.state.ConnectionState
-import dev.mcbookshelf.sniffer.state.PendingAuthRegistry
+import dev.mcbookshelf.sniffer.dap.ConnectionState
+import dev.mcbookshelf.sniffer.dap.PendingAuthRegistry
 import jakarta.websocket.ClientEndpointConfig
 import jakarta.websocket.Endpoint
 import jakarta.websocket.EndpointConfig

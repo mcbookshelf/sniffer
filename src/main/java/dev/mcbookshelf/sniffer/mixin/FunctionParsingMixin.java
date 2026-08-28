@@ -6,7 +6,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import dev.mcbookshelf.sniffer.accessor.CommandFunctionUniqueAccessors;
 import dev.mcbookshelf.sniffer.accessor.MacroFunctionUniqueAccessor;
 import dev.mcbookshelf.sniffer.accessor.UnboundUniqueAccessor;
-import dev.mcbookshelf.sniffer.state.FunctionTextLoader;
+import dev.mcbookshelf.sniffer.features.source.FunctionTextLoader;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.UnboundEntryAction;
 import net.minecraft.commands.execution.tasks.BuildContexts;

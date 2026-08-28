@@ -12,7 +12,7 @@ import dev.mcbookshelf.sniffer.gametest.support.assertTrue
 import dev.mcbookshelf.sniffer.gametest.support.thenAwaitDapReady
 import dev.mcbookshelf.sniffer.gametest.support.thenAwaitEvent
 import dev.mcbookshelf.sniffer.gametest.support.thenRequest
-import dev.mcbookshelf.sniffer.state.FunctionPathRegistry
+import dev.mcbookshelf.sniffer.features.source.FunctionPathRegistry
 import java.nio.file.Files
 import net.fabricmc.fabric.api.gametest.v1.GameTest
 import net.minecraft.core.BlockPos

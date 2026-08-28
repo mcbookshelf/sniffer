@@ -1,7 +1,5 @@
 package dev.mcbookshelf.sniffer.dispatch
 
-import dev.mcbookshelf.sniffer.handlers.buildHandlers
-
 /**
  * Process wide holder of the single [Dispatcher], and how the entrypoints reach it.
  * Splitting [init] from [get] keeps the initialisation point explicit instead of hiding it behind a lazy.

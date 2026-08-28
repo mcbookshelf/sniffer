@@ -4,13 +4,9 @@ import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.IInput
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
-import dev.mcbookshelf.sniffer.domain.RealPath
-import dev.mcbookshelf.sniffer.input.*
-import dev.mcbookshelf.sniffer.output.*
-import dev.mcbookshelf.sniffer.state.DebugEventBus
-import dev.mcbookshelf.sniffer.state.ServerReference
-import dev.mcbookshelf.sniffer.state.SteppingState
-import dev.mcbookshelf.sniffer.state.VariableNode
+import dev.mcbookshelf.sniffer.features.source.RealPath
+import dev.mcbookshelf.sniffer.features.stepping.SteppingState
+import dev.mcbookshelf.sniffer.features.variables.VariableNode
 import dev.mcbookshelf.sniffer.util.Extension.addSnifferPrefix
 import org.eclipse.lsp4j.debug.*
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
@@ -18,6 +14,24 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
+import dev.mcbookshelf.sniffer.features.breakpoints.SetBreakpointsInput
+import dev.mcbookshelf.sniffer.features.callstack.GetScopesInput
+import dev.mcbookshelf.sniffer.features.callstack.GetStackTraceInput
+import dev.mcbookshelf.sniffer.features.evaluate.EvaluateInput
+import dev.mcbookshelf.sniffer.features.source.GetSourceInput
+import dev.mcbookshelf.sniffer.features.stepping.ContinueInput
+import dev.mcbookshelf.sniffer.features.stepping.PauseInput
+import dev.mcbookshelf.sniffer.features.stepping.StepInInput
+import dev.mcbookshelf.sniffer.features.stepping.StepOutInput
+import dev.mcbookshelf.sniffer.features.stepping.StepOverInput
+import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesInput
+import dev.mcbookshelf.sniffer.features.breakpoints.SetBreakpointsOutput
+import dev.mcbookshelf.sniffer.features.callstack.ScopesOutput
+import dev.mcbookshelf.sniffer.features.callstack.StackTraceOutput
+import dev.mcbookshelf.sniffer.features.evaluate.EvaluateOutput
+import dev.mcbookshelf.sniffer.features.source.SourceOutput
+import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesOutput
+import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointSpec
 
 /**
  * Debug Adapter Protocol server backed by LSP4J.

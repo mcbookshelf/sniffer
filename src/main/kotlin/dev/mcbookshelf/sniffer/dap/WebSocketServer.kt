@@ -6,12 +6,9 @@ import jakarta.websocket.server.ServerEndpointConfig
 import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
-import dev.mcbookshelf.sniffer.input.ContinueInput
+import dev.mcbookshelf.sniffer.features.stepping.ContinueInput
 import dev.mcbookshelf.sniffer.network.AuthPromptPayload
-import dev.mcbookshelf.sniffer.state.ConnectionState
-import dev.mcbookshelf.sniffer.state.PendingAuthRegistry
-import dev.mcbookshelf.sniffer.state.ServerReference
-import dev.mcbookshelf.sniffer.state.SteppingState
+import dev.mcbookshelf.sniffer.features.stepping.SteppingState
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.server.players.NameAndId
 import org.eclipse.lsp4j.debug.launch.DSPLauncher

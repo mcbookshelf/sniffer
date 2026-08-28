@@ -1,7 +1,7 @@
 package dev.mcbookshelf.sniffer.gametest.support
 
-import dev.mcbookshelf.sniffer.state.StepType
-import dev.mcbookshelf.sniffer.state.SteppingState
+import dev.mcbookshelf.sniffer.features.stepping.StepType
+import dev.mcbookshelf.sniffer.features.stepping.SteppingState
 
 /** Entry point for the assertions on a [DebugSession]. */
 fun assertThat(session: DebugSession) = DebugSessionAssert(session)

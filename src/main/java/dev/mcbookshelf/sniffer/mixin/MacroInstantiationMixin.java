@@ -3,7 +3,7 @@ package dev.mcbookshelf.sniffer.mixin;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.mcbookshelf.sniffer.accessor.MacroFunctionUniqueAccessor;
 import dev.mcbookshelf.sniffer.accessor.UnboundUniqueAccessor;
-import dev.mcbookshelf.sniffer.state.MacroArgsStore;
+import dev.mcbookshelf.sniffer.features.variables.MacroArgsStore;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.tasks.BuildContexts;
 import net.minecraft.commands.functions.InstantiatedFunction;

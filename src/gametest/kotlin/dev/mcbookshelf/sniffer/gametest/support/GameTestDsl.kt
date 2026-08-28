@@ -3,7 +3,7 @@ package dev.mcbookshelf.sniffer.gametest.support
 import com.mojang.authlib.GameProfile
 import dev.mcbookshelf.sniffer.network.AuthPromptPayload
 import dev.mcbookshelf.sniffer.network.SetDebugModePayload
-import dev.mcbookshelf.sniffer.state.PendingAuthRegistry
+import dev.mcbookshelf.sniffer.dap.PendingAuthRegistry
 import io.netty.channel.embedded.EmbeddedChannel
 import jakarta.websocket.CloseReason
 import net.minecraft.gametest.framework.GameTestHelper

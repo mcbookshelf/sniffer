@@ -8,7 +8,6 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.fabricmc.fabric.api.particle.v1.FabricParticleTypes
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper
-import dev.mcbookshelf.sniffer.commands.*
 import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dap.WebSocketServer
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
@@ -17,7 +16,6 @@ import dev.mcbookshelf.sniffer.network.AuthResponsePayload
 import dev.mcbookshelf.sniffer.network.SetDapConnectedPayload
 import dev.mcbookshelf.sniffer.network.SetDebugModePayload
 import dev.mcbookshelf.sniffer.network.SetDebuggingPayload
-import dev.mcbookshelf.sniffer.state.*
 import net.minecraft.commands.synchronization.SingletonArgumentInfo
 import net.minecraft.core.Registry
 import net.minecraft.core.particles.SimpleParticleType
@@ -30,6 +28,23 @@ import java.io.InputStream
 import java.util.logging.LogManager
 import dev.mcbookshelf.sniffer.expression.ExprArgumentType
 import dev.mcbookshelf.sniffer.expression.LogArgumentType
+import dev.mcbookshelf.sniffer.features.assertion.AssertCommand
+import dev.mcbookshelf.sniffer.features.breakpoints.BreakPointCommand
+import dev.mcbookshelf.sniffer.features.debugmode.DebugModeCommand
+import dev.mcbookshelf.sniffer.features.jvmtimer.JvmtimerCommand
+import dev.mcbookshelf.sniffer.features.log.LogCommand
+import dev.mcbookshelf.sniffer.features.watch.WatchCommand
+import dev.mcbookshelf.sniffer.dap.ConnectionState
+import dev.mcbookshelf.sniffer.dap.DebugEventBus
+import dev.mcbookshelf.sniffer.dap.PendingAuthRegistry
+import dev.mcbookshelf.sniffer.dap.ServerReference
+import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointManager
+import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
+import dev.mcbookshelf.sniffer.features.debugmode.DebugModeState
+import dev.mcbookshelf.sniffer.features.source.FunctionPathGetter
+import dev.mcbookshelf.sniffer.features.source.FunctionPathRegistry
+import dev.mcbookshelf.sniffer.features.stepping.PausedExecutionStore
+import dev.mcbookshelf.sniffer.features.stepping.SteppingState
 
 /**
  * Entrypoint of the mod, wiring the debugger to the server lifecycle.
