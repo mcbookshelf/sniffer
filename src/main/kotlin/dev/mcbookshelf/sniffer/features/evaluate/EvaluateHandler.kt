@@ -6,11 +6,10 @@ import dev.mcbookshelf.sniffer.features.variables.VariableManager
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
-import net.minecraft.commands.CommandSourceStack
 import net.minecraft.nbt.CompoundTag
 
 /**
- * Evaluates a debug expression against the executor of the current scope.
+ * Evaluates a debug expression against the source a command would run as.
  *
  * A [CompoundTag] result is registered as a variable subtree, so the client can expand it afterwards.
  * The [EvaluationSession] remembers that subtree, and evaluating the same expression again drops it first.
@@ -32,13 +31,9 @@ class EvaluateHandler(
             return EvaluateOutput(result = ex.message ?: "Expression is invalid", variablesReference = 0)
         }
 
-        val scope = scopeManager.currentScope.orElse(null)
-            ?: return EvaluateOutput(result = "Scope is null", variablesReference = 0)
-
-        val source = scope.executor
-        if (source !is CommandSourceStack) {
-            return EvaluateOutput(result = "Source is not a server command source", variablesReference = 0)
-        }
+        // The same source a command would run as, so an expression reads what a command would see, whether the
+        // debugger is stopped in a scope or only attached to a player.
+        val source = scopeManager.commandSource(ctx.source)
 
         return try {
             val value = debugData.get(source)

@@ -107,10 +107,43 @@ What a datapack broadcasts lands there too, since the game logs its broadcasts, 
 Lines keep the format they have in `logs/latest.log`, with their timestamp, thread, level and logger, so the *Filter* box of the console can narrow them down: type `WARN` to keep the warnings, or the name of a mod to keep only what it writes.
 
 
+### Running commands
+
+The *Debug Console* is also an input: what you type there is run in the game, written as it would be in a function file, with or without a leading slash.
+
+A command runs with the execution context of the paused command, so `@s` means the executor of the line the debugger stopped on, and a relative coordinate is relative to it.
+However, a command executed from the *Debug Console* is not as *part of* the paused function: breakpoints inside a function called from the console do not pause, and the paused execution stays exactly where it is.
+What the command answers is printed back in the console rather than in the chat of every player.
+
+If the session is attached, but nothing paused, a command runs as the player the debugger is attached to: the one named by `user` in the launch configuration, or the host of the world in singleplayer.
+Their position, their dimension and `@s` are what the command sees.
+
+If that player is offline, the command falls back to the source the server console uses, from the origin of the overworld and with no entity behind `@s`.
+
+Completions come from the game itself, so they know the loaded functions, the online players and the registries of that particular server.
+
+```
+data get storage my_pack:data counter
+```
+
+To run a line of a function without retyping it, select it and pick *Evaluate in Debug Console* from the right-click menu.
+A function file writes its commands the way the console takes them, so the line goes across as it is written.
+
+To read a value instead of running something, write an expression of the mini language, in braces and with its operands in parentheses, exactly as `#!log` and `#!assert` take it:
+
+```
+{ (data storage my_pack:data counter) }
+{ (name @s) == "steve" }
+{ (score @s deaths) > 3 }
+```
+
+See [Expressions](commands/expression) for more information.
+
+
 ### Breakpoint kinds
 
 VS Code offers several kinds of breakpoints, of which Sniffer supports some.
-To change the kind of a breakpoint, right-click it, then pick *Edit Breakpoint*.
+To change the kind of breakpoint, right-click it, then pick *Edit Breakpoint*.
 
 ![The breakpoint kinds offered by VS Code](/_static/images/vscode-breakpoint-kinds.png)
 
@@ -128,16 +161,15 @@ To change the kind of a breakpoint, right-click it, then pick *Edit Breakpoint*.
 A trace records which functions an execution enters, and draws them as a graph.
 It answers a different question from a breakpoint: not *what is the state here*, but *how did the game get here*.
 
-Start one from the command palette, with *Sniffer: Trace a command*, then type the command to trace exactly as you would in game:
+Start one with `/trace run`, followed by the command to trace, typed in the *Debug Console* or in the game:
 
 ![The call graph of a traced execution](/_static/images/vscode-trace.png)
 
-```mcfunction
-function my_pack:main
+```
+/trace run function my_pack:main
 ```
 
-The *Trace* tab opens beside your editor and fills in as the execution runs.
-It also opens on its own when a trace is started from inside the game with `/trace run`, so a trace launched from the chat still shows up here.
+The *Trace* tab opens beside your editor and fills in as the execution runs, wherever the trace was started from.
 
 ### Reading the graph
 

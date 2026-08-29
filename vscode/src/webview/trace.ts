@@ -279,6 +279,6 @@ function setStatus(graph: SerializedGraph): void {
     }
     status.className = graph.status;
     status.textContent = graph.nodes.length <= 1
-        ? 'No trace yet. Run "Sniffer: Trace a command" while attached to Minecraft.'
+        ? 'No trace yet. Run "/trace run <command>" in the debug console or in the game.'
         : `${graph.command} - ${graph.status}`;
 }

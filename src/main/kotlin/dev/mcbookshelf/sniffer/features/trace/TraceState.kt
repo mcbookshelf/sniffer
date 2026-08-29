@@ -32,18 +32,4 @@ object TraceState {
         currentTraceId = null
         return traceId
     }
-
-    /**
-     * A point to compare against later, taken before something that may open a trace.
-     * @see openedSince
-     */
-    fun mark(): Int = lastTraceId
-
-    /**
-     * The trace opened since [mark] was taken, `null` when none was.
-     *
-     * This is the only way to tell an accepted trace from one refused because another was already running:
-     * reading the open trace would answer with somebody else's id, and the open one may already have drained.
-     */
-    fun openedSince(mark: Int): Int? = lastTraceId.takeIf { it != mark }
 }

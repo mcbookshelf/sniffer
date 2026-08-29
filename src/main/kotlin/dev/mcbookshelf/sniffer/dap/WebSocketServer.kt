@@ -139,13 +139,16 @@ class WebSocketServer : Endpoint() {
             }
         })
 
+        // Recorded whether or not the connection has to be approved: it is also who the debug console runs as.
+        val username = session.requestParameterMap["user"]?.firstOrNull()?.takeIf { it.isNotBlank() }
+        ConnectionState.setAttachedUser(username)
+
         val cfg = DebuggerConfig.getInstance()
         if (!cfg.authEnabled) {
             startDap(session)
             return
         }
 
-        val username = session.requestParameterMap["user"]?.firstOrNull()?.takeIf { it.isNotBlank() }
         val server = runCatching { ServerReference.get() }.getOrNull()
         if (server == null) {
             reject(session, "Minecraft server not available")
@@ -263,6 +266,7 @@ class WebSocketServer : Endpoint() {
 
     private fun cleanup() {
         ConnectionState.setConnected(false)
+        ConnectionState.setAttachedUser(null)
         // Detach first, so anything the session ends below writes to nobody rather than to a dead socket.
         DapClient.detach()
         endDebugSession()

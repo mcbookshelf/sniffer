@@ -1,5 +1,6 @@
 package dev.mcbookshelf.sniffer.dap
 
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 import dev.mcbookshelf.sniffer.dispatch.IInput
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
@@ -10,17 +11,15 @@ import dev.mcbookshelf.sniffer.features.callstack.GetScopesInput
 import dev.mcbookshelf.sniffer.features.callstack.GetStackTraceInput
 import dev.mcbookshelf.sniffer.features.callstack.ScopesOutput
 import dev.mcbookshelf.sniffer.features.callstack.StackTraceOutput
-import dev.mcbookshelf.sniffer.features.evaluate.EvaluateInput
-import dev.mcbookshelf.sniffer.features.evaluate.EvaluateOutput
-import dev.mcbookshelf.sniffer.features.source.Line
+import dev.mcbookshelf.sniffer.features.evaluate.*
 import dev.mcbookshelf.sniffer.features.source.GetSourceInput
+import dev.mcbookshelf.sniffer.features.source.Line
 import dev.mcbookshelf.sniffer.features.source.SourceFactory
 import dev.mcbookshelf.sniffer.features.source.SourceOutput
 import dev.mcbookshelf.sniffer.features.stepping.*
 import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesInput
 import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesOutput
 import dev.mcbookshelf.sniffer.features.variables.VariableNode
-import dev.mcbookshelf.sniffer.chat.SnifferChat
 import org.eclipse.lsp4j.debug.*
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
@@ -44,6 +43,9 @@ class DapServer : IDebugProtocolServer, DapService {
         private const val ATTACHED_MESSAGE = "sniffer.dap.attached"
         private const val DISCONNECTED_MESSAGE = "sniffer.dap.disconnected"
         private const val BREAKPOINT_DESCRIPTION = "Breakpoint reached"
+
+        /** The value the protocol gives `EvaluateArguments.context` for the debug console. */
+        private const val REPL_CONTEXT = "repl"
         private const val MAIN_THREAD_NAME = "Main Thread"
 
         private const val DEFAULT_START_FRAME = 0
@@ -53,6 +55,12 @@ class DapServer : IDebugProtocolServer, DapService {
     }
 
     private var client: IDebugProtocolClient? = null
+
+    /**
+     * Whether the editor counts the first column as 1, which it says once in its initialize request.
+     * Completions are given back in the same coordinates they were asked in, so the answer has to be kept.
+     */
+    private var columnsStartAt1: Boolean = true
 
     /**
      * One DAP `sourceReference` per function packed in a zip, since clients cache source content by reference.
@@ -73,7 +81,12 @@ class DapServer : IDebugProtocolServer, DapService {
             supportsConfigurationDoneRequest = true
             supportsConditionalBreakpoints = true
             supportsRestartRequest = true
+            supportsCompletionsRequest = true
+            // A command is a sequence of words, so the editor has to ask again after each one.
+            completionTriggerCharacters = arrayOf(" ")
         }
+
+        columnsStartAt1 = args.columnsStartAt1 != false
 
         return CompletableFuture.completedFuture(capabilities).thenApply { c ->
             LOGGER.debug("Sending initialized event")
@@ -291,15 +304,66 @@ class DapServer : IDebugProtocolServer, DapService {
         }
     }
 
+    /**
+     * Evaluates an expression, or runs a command when the console asks for one.
+     */
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
         LOGGER.debug("Evaluate request received with arguments: {}", args)
 
         return onServerThread {
-            val output = dispatch(EvaluateInput(args.expression)) as EvaluateOutput
+            if (isConsoleCommand(args)) {
+                val output = dispatch(RunCommandInput(args.expression)) as RunCommandOutput
 
-            EvaluateResponse().apply {
-                result = output.result
-                variablesReference = output.variablesReference
+                // A command answers with text, and 0 is how the protocol says there is nothing to expand.
+                EvaluateResponse().apply {
+                    result = render(output)
+                    variablesReference = 0
+                }
+            } else {
+                val output = dispatch(EvaluateInput(args.expression)) as EvaluateOutput
+
+                EvaluateResponse().apply {
+                    result = output.result
+                    variablesReference = output.variablesReference
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether the console is asking for a command rather than for a value.
+     *
+     * Everything typed in the console is a command, which is what a console attached to a game is for, unless
+     * it opens with the brace the expression language already wears in `#!log` and `#!assert`.
+     * A command always begins with a letter, so the opening brace alone separates them.
+     */
+    private fun isConsoleCommand(args: EvaluateArguments): Boolean =
+        args.context == REPL_CONTEXT && !args.expression.trimStart().startsWith("{")
+
+
+    /** What the console shows: whatever the command wrote back, or what it answered when it wrote nothing. */
+    private fun render(output: RunCommandOutput): String = when {
+        output.feedback.isNotEmpty() -> output.feedback.joinToString("\n")
+        output.success -> output.result.toString()
+        else -> "The command reported no success."
+    }
+
+    override fun completions(args: CompletionsArguments): CompletableFuture<CompletionsResponse> {
+        LOGGER.debug("Completions request received with arguments: {}", args)
+
+        return onServerThread {
+            val base = if (columnsStartAt1) 1 else 0
+            val output = dispatch(CompleteCommandInput(args.text, args.column - base)) as CompletionsOutput
+
+            CompletionsResponse().apply {
+                targets = output.completions.map { completion ->
+                    CompletionItem().apply {
+                        label = completion.text
+                        start = completion.start + base
+                        length = completion.length
+                        detail = completion.tooltip
+                    }
+                }.toTypedArray()
             }
         }
     }

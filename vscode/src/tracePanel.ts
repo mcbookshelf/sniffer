@@ -40,6 +40,20 @@ export class TracePanel {
         });
     }
 
+    /**
+     * Listens for the events of a trace, for as long as the extension lives.
+     *
+     * A trace is started by `/trace run`, in game or through the debug console, so nothing opens the panel but
+     * the events themselves.
+     */
+    static register(context: vscode.ExtensionContext): void {
+        context.subscriptions.push(
+            vscode.debug.onDidReceiveDebugSessionCustomEvent(
+                event => TracePanel.handleEvent(event, context.extensionUri),
+            ),
+        );
+    }
+
     /** Opens the panel, or brings back the one already open. */
     static reveal(extensionUri: vscode.Uri): TracePanel {
         if (TracePanel.instance) {

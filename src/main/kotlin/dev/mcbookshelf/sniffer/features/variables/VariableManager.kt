@@ -1,6 +1,7 @@
 package dev.mcbookshelf.sniffer.features.variables
 
 import com.mojang.brigadier.StringReader
+import dev.mcbookshelf.sniffer.util.Extension.test
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.ExecutionCommandSource
 import net.minecraft.nbt.CompoundTag
@@ -131,11 +132,19 @@ object VariableManager {
         return str.substring(str.lastIndexOf(".") + 1)
     }
 
+    /**
+     * Parses [expression], as the whole mini language when it is braced and as a single operand otherwise.
+     *
+     * `{ (name @s) == "steve" }` is the language as `#!log` and `#!assert` write it, operands in parentheses and
+     * operators between them.
+     * A bare `data storage pack:x a` is the shorthand the variable views send, an operand on its own.
+     */
     @JvmStatic
     fun evaluate(expression: String): Result<DebugData> {
-        val trimmed = expression.trim()
+        val reader = StringReader(expression.trim())
         return runCatching {
-            ExprArgumentType().parseArgumentWithoutBrackets(StringReader(trimmed))
+            if (reader.test('{')) ExprArgumentType().parse(reader)
+            else ExprArgumentType().parseArgumentWithoutBrackets(reader)
         }
     }
 }
