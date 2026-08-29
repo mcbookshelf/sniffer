@@ -1,20 +1,12 @@
 package dev.mcbookshelf.sniffer.gametest.integration
 
 import dev.mcbookshelf.sniffer.dap.ConnectionState
-import dev.mcbookshelf.sniffer.gametest.support.DebugSession
 import dev.mcbookshelf.sniffer.features.trace.TraceArguments
 import dev.mcbookshelf.sniffer.features.trace.TraceEndReason
-import dev.mcbookshelf.sniffer.gametest.support.assertEquals
-import dev.mcbookshelf.sniffer.gametest.support.assertFalse
-import dev.mcbookshelf.sniffer.gametest.support.assertTrue
-import dev.mcbookshelf.sniffer.gametest.support.assertThat
-import dev.mcbookshelf.sniffer.gametest.support.thenAwaitDapReady
-import dev.mcbookshelf.sniffer.gametest.support.thenAwaitEvent
-import dev.mcbookshelf.sniffer.gametest.support.thenRequest
+import dev.mcbookshelf.sniffer.gametest.support.*
 import net.fabricmc.fabric.api.gametest.v1.GameTest
 import net.minecraft.gametest.framework.GameTestHelper
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
-import dev.mcbookshelf.sniffer.gametest.support.SnifferDapServer
 
 /**
  * `/trace`, whose graph only ever reaches an attached editor.
@@ -74,8 +66,8 @@ class TraceIntegrationGameTest : AbstractDapIntegrationGameTest() {
                 // The trace has to be closed, or this one is refused as a second.
                 session.run("trace run function $LINEAR")
             }
+            .thenAwaitEvent("traceStarted", events.traceStarted)
             .thenWaitUntil { assertThat(session).hasExecuted("a", "b", "c") }
-            .thenExecute { assertEquals(events.traceStarted.size, 1, "the next trace was accepted") }
             .thenSucceedAndClose()
     }
 
