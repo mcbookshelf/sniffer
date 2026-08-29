@@ -5,12 +5,10 @@ import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType
 import com.mojang.logging.LogUtils
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import dev.mcbookshelf.sniffer.util.Extension.appendLine
 import dev.mcbookshelf.sniffer.features.callstack.StackFormatter
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
-import net.minecraft.server.permissions.Permissions
 import net.minecraft.nbt.ByteTag
 import net.minecraft.nbt.NbtUtils
 import net.minecraft.nbt.Tag
@@ -19,6 +17,9 @@ import net.minecraft.network.chat.MutableComponent
 import net.minecraft.util.CommonColors
 import org.slf4j.Logger
 import dev.mcbookshelf.sniffer.expression.ExprArgumentType
+import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import dev.mcbookshelf.sniffer.command.SnifferCommand
 
 /**
  * The `/assert` command, which evaluates an expression and reports the call stack when it does not hold.
@@ -26,7 +27,7 @@ import dev.mcbookshelf.sniffer.expression.ExprArgumentType
  * @author Alumopper
  * @author theogiraudet
  */
-object AssertCommand {
+object AssertCommand : SnifferCommand {
 
     private val LOGGER: Logger = LogUtils.getLogger()
 
@@ -39,27 +40,20 @@ object AssertCommand {
      */
     private val ASSERT_FAILED = DynamicCommandExceptionType { it as Component }
 
-    @JvmStatic
-    fun onInitialize() {
-        CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
-            dispatcher.register(
-                literal<CommandSourceStack>("assert")
-                    .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
-                    .then(argument("expr", ExprArgumentType())
-                        .executes { ctx ->
-                            val failure = failureOf(ctx)
-                            if (failure == null) {
-                                ctx.source.sendSuccess({ Component.translatable("sniffer.commands.assert.passed") }, false)
-                                return@executes 1
-                            }
-                            // Broadcast as well as thrown: a command that fails inside a function reports nowhere a player would look.
-                            ctx.source.server.playerList.broadcastSystemMessage(failure, false)
-                            throw ASSERT_FAILED.create(failure)
-                        }
-                    )
+    override fun build(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> =
+        literal<CommandSourceStack>("assert")
+            .then(argument("expr", ExprArgumentType())
+                .executes { ctx ->
+                    val failure = failureOf(ctx)
+                    if (failure == null) {
+                        ctx.source.sendSuccess({ Component.translatable("sniffer.commands.assert.passed") }, false)
+                        return@executes 1
+                    }
+                    // Broadcast as well as thrown: a command that fails inside a function reports nowhere a player would look.
+                    ctx.source.server.playerList.broadcastSystemMessage(failure, false)
+                    throw ASSERT_FAILED.create(failure)
+                }
             )
-        }
-    }
 
     /** Why the assertion did not hold, or null if it did. */
     private fun failureOf(ctx: CommandContext<CommandSourceStack>): Component? {

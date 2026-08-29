@@ -4,16 +4,17 @@ import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.logging.LogUtils
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import dev.mcbookshelf.sniffer.util.Extension.appendLine
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
-import net.minecraft.server.permissions.Permissions
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.util.CommonColors
 import kotlin.math.max
 import kotlin.math.min
+import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import dev.mcbookshelf.sniffer.command.SnifferCommand
 
 /**
  * The `/jvmtimer` command, which times datapack functions from the JVM side.
@@ -21,71 +22,64 @@ import kotlin.math.min
  *
  * @author Alumopper
  */
-object JvmtimerCommand {
+object JvmtimerCommand : SnifferCommand {
 
     private val LOGGER = LogUtils.getLogger()
 
     val timers = HashMap<String, JvmTimer>()
 
-    @JvmStatic
-    fun onInitialize() {
-        CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
-            dispatcher.register(
-                literal<CommandSourceStack>("jvmtimer")
-                    .requires { it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER) }
-                    .then(literal<CommandSourceStack>("start")
-                        .then(argument("id", StringArgumentType.string())
-                            .suggests(JvmtimerSuggestionProvider)
-                            .executes {
-                                val id = StringArgumentType.getString(it, "id")
-                                getTimer(id).start()
-                                it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.started", id) }, false)
-                                1
-                            }
-                        )
-                    ).then(literal<CommandSourceStack>("end")
-                        .then(argument("id", StringArgumentType.string())
-                            .suggests(JvmtimerSuggestionProvider)
-                            .executes {
-                                val id = StringArgumentType.getString(it ,"id")
-                                getTimer(id).end()
-                                it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.stopped", id) }, false)
-                                1
-                            }
-                        )
-                    ).then(literal<CommandSourceStack>("get")
-                        .then(argument("id", StringArgumentType.string())
-                            .suggests(JvmtimerSuggestionProvider)
-                            .executes {
-                                val id = StringArgumentType.getString(it ,"id")
-                                getTimer(id).get(it)
-                                1
-                            }
-                        )
-                    ).then(literal<CommandSourceStack>("reset")
-                        .then(argument("id", StringArgumentType.string())
-                            .suggests(JvmtimerSuggestionProvider)
-                            .executes {
-                                val id = StringArgumentType.getString(it ,"id")
-                                getTimer(id).reset()
-                                it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.reset", id) }, false)
-                                1
-                            }
-                        )
-                    ).then(literal<CommandSourceStack>("disable")
-                        .then(argument("id", StringArgumentType.string())
-                            .suggests(JvmtimerSuggestionProvider)
-                            .executes {
-                                val id = StringArgumentType.getString(it ,"id")
-                                getTimer(id).disable()
-                                it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.disable", id) }, false)
-                                1
-                            }
-                        )
-                    )
+    override fun build(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> =
+        literal<CommandSourceStack>("jvmtimer")
+            .then(literal<CommandSourceStack>("start")
+                .then(argument("id", StringArgumentType.string())
+                    .suggests(JvmtimerSuggestionProvider)
+                    .executes {
+                        val id = StringArgumentType.getString(it, "id")
+                        getTimer(id).start()
+                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.started", id) }, false)
+                        1
+                    }
+                )
+            ).then(literal<CommandSourceStack>("end")
+                .then(argument("id", StringArgumentType.string())
+                    .suggests(JvmtimerSuggestionProvider)
+                    .executes {
+                        val id = StringArgumentType.getString(it ,"id")
+                        getTimer(id).end()
+                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.stopped", id) }, false)
+                        1
+                    }
+                )
+            ).then(literal<CommandSourceStack>("get")
+                .then(argument("id", StringArgumentType.string())
+                    .suggests(JvmtimerSuggestionProvider)
+                    .executes {
+                        val id = StringArgumentType.getString(it ,"id")
+                        getTimer(id).get(it)
+                        1
+                    }
+                )
+            ).then(literal<CommandSourceStack>("reset")
+                .then(argument("id", StringArgumentType.string())
+                    .suggests(JvmtimerSuggestionProvider)
+                    .executes {
+                        val id = StringArgumentType.getString(it ,"id")
+                        getTimer(id).reset()
+                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.reset", id) }, false)
+                        1
+                    }
+                )
+            ).then(literal<CommandSourceStack>("disable")
+                .then(argument("id", StringArgumentType.string())
+                    .suggests(JvmtimerSuggestionProvider)
+                    .executes {
+                        val id = StringArgumentType.getString(it ,"id")
+                        getTimer(id).disable()
+                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.disable", id) }, false)
+                        1
+                    }
+                )
             )
-        }
-    }
 
     fun getTimer(id: String): JvmTimer{
         return timers[id] ?: JvmTimer(id).also { timers[id] = it }

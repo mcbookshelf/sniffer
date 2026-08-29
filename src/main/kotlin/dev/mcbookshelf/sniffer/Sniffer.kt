@@ -1,5 +1,6 @@
 package dev.mcbookshelf.sniffer
 
+import dev.mcbookshelf.sniffer.command.CommandsRegistry
 import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dap.WebSocketServer
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
@@ -24,12 +25,6 @@ import java.io.InputStream
 import java.util.logging.LogManager
 import dev.mcbookshelf.sniffer.expression.ExprArgumentType
 import dev.mcbookshelf.sniffer.expression.LogArgumentType
-import dev.mcbookshelf.sniffer.features.assertion.AssertCommand
-import dev.mcbookshelf.sniffer.features.breakpoints.BreakPointCommand
-import dev.mcbookshelf.sniffer.features.debugmode.DebugModeCommand
-import dev.mcbookshelf.sniffer.features.jvmtimer.JvmtimerCommand
-import dev.mcbookshelf.sniffer.features.log.LogCommand
-import dev.mcbookshelf.sniffer.features.watch.WatchCommand
 import dev.mcbookshelf.sniffer.dap.ConnectionState
 import dev.mcbookshelf.sniffer.dap.DebugEventBus
 import dev.mcbookshelf.sniffer.dap.PendingAuthRegistry
@@ -41,7 +36,6 @@ import dev.mcbookshelf.sniffer.features.source.FunctionPathGetter
 import dev.mcbookshelf.sniffer.features.source.FunctionPathRegistry
 import dev.mcbookshelf.sniffer.features.stepping.PausedExecutionStore
 import dev.mcbookshelf.sniffer.features.stepping.SteppingState
-import dev.mcbookshelf.sniffer.features.trace.TraceCommand
 
 /**
  * Entrypoint of the mod, wiring the debugger to the server lifecycle.
@@ -165,12 +159,6 @@ class Sniffer : ModInitializer {
             ServerPlayNetworking.send(player, SetDebuggingPayload(SteppingState.isDebugging))
         }
 
-        BreakPointCommand.onInitialize()
-        LogCommand.onInitialize()
-        AssertCommand.onInitialize()
-        JvmtimerCommand.onInitialize()
-        WatchCommand.onInitialize()
-        DebugModeCommand.onInitialize()
-        TraceCommand.onInitialize()
+        CommandsRegistry.onInitialize()
     }
 }
