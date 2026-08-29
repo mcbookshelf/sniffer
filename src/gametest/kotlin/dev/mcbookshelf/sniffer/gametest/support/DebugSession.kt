@@ -9,6 +9,7 @@ import dev.mcbookshelf.sniffer.features.stepping.StepInInput
 import dev.mcbookshelf.sniffer.features.stepping.StepOutInput
 import dev.mcbookshelf.sniffer.features.stepping.StepOverInput
 import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointManager
+import dev.mcbookshelf.sniffer.features.source.Line
 import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
 import dev.mcbookshelf.sniffer.features.stepping.SteppingState
 import net.minecraft.gametest.framework.GameTestAssertException
@@ -70,7 +71,7 @@ class DebugSession(val helper: GameTestHelper) {
      * For functions this test mod does not ship itself (a datapack written into the world, zipped or not), [path] is what the debugger resolved for them.
      */
     fun breakpointAtFile(path: String, line: Int) {
-        BreakpointManager.addBreakpoint(path, line).orElseThrow {
+        BreakpointManager.addBreakpoint(path, Line.inFile(line)).orElseThrow {
             GameTestAssertException(Component.literal("Could not place a breakpoint in $path at line $line"), 0)
         }
     }

@@ -4,6 +4,7 @@ import net.minecraft.commands.ExecutionCommandSource
 import net.minecraft.nbt.CompoundTag
 import java.util.Optional
 import dev.mcbookshelf.sniffer.features.source.FunctionIdentity
+import dev.mcbookshelf.sniffer.features.source.Line
 
 /**
  * One entry of the call hierarchy, holding the function being run and the state to inspect it.
@@ -24,14 +25,19 @@ class DebugScope internal constructor(
     val macroVariables: CompoundTag?,
     val id: Int,
 ) {
-    var line: Int = -2
+    /** The last line of this function that ran, `null` until one has. */
+    var line: Line? = null
+        private set
+
+    /** Called from the mixin layer, which counts lines the way the file does. */
+    fun recordLine(zeroBased: Int) {
+        line = Line.inFile(zeroBased)
+    }
 
     /** The `namespace:path` alone, for the callers that name the function without locating it. */
     val function: String get() = identity.minecraftPath
 
-    val callerFunction: Optional<String>
-        get() = Optional.ofNullable(parent).map { it.function }
-
-    val callerLine: Optional<Int>
-        get() = Optional.ofNullable(parent).map { it.line }
+    /** The line this scope was called from, `null` at the bottom of the stack. */
+    val callerLine: Line?
+        get() = parent?.line
 }

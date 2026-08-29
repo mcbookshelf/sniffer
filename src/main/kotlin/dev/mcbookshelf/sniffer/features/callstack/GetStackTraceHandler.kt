@@ -3,6 +3,8 @@ package dev.mcbookshelf.sniffer.features.callstack
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
+import dev.mcbookshelf.sniffer.features.source.Line
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.min
 
 /**
@@ -37,6 +39,6 @@ class GetStackTraceHandler(
         return StackTraceOutput(frames = frames, totalFrames = total)
     }
 
-    private fun headLine(): Int =
-        scopeManager.currentScope.map { it.line }.orElse(0)
+    private fun headLine(): Line? =
+        scopeManager.currentScope.getOrNull()?.line
 }

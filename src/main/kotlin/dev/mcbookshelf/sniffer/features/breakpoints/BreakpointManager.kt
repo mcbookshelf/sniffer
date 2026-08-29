@@ -13,9 +13,11 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Paths
 import java.util.Optional
+import kotlin.jvm.optionals.getOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
+import dev.mcbookshelf.sniffer.features.source.Line
 
 /**
  * Owns breakpoint storage, path resolution and the "should execution pause here" query.
@@ -28,13 +30,13 @@ object BreakpointManager {
     private val PATH_PATTERN: Pattern =
         Pattern.compile("data/(?<namespace>.+)/function/(?<path>.+)\\.mcfunction")
 
-    private data class Breakpoint(val id: Int, val line: Int, val condition: String? = null)
+    private data class Breakpoint(val id: Int, val line: Line, val condition: String? = null)
 
     private class FunctionBreakpoints(
         val functionMcPath: String,
         val functionPath: String,
     ) {
-        val breakpoints: MutableMap<Int, Breakpoint> = HashMap()
+        val breakpoints: MutableMap<Line, Breakpoint> = HashMap()
     }
 
     /** Primary index: normalized filesystem path → breakpoints. */
@@ -79,8 +81,9 @@ object BreakpointManager {
     @JvmStatic
     fun mustStop(mcpath: String?, line: Int, source: CommandSourceStack?): Boolean {
         if (mcpath == null) return false
-        val breakpoint = byMcPath[mcpath]?.breakpoints?.get(line) ?: return false
-        if (isAtCurrentPosition(mcpath, line)) return false
+        val at = Line.inFile(line)
+        val breakpoint = byMcPath[mcpath]?.breakpoints?.get(at) ?: return false
+        if (isAtCurrentPosition(mcpath, at)) return false
         return conditionHolds(breakpoint, mcpath, source)
     }
 
@@ -178,9 +181,9 @@ object BreakpointManager {
         return parse
     }
 
-    private fun isAtCurrentPosition(file: String?, line: Int): Boolean {
+    private fun isAtCurrentPosition(file: String?, line: Line): Boolean {
         val functionName = scopeManager.currentScope.map { it.function }.orElse("")
-        val functionLine = scopeManager.currentScope.map { it.line }.orElse(-1)
+        val functionLine = scopeManager.currentScope.getOrNull()?.line
         return file == functionName && line == functionLine
     }
 
@@ -193,7 +196,7 @@ object BreakpointManager {
      */
     @JvmStatic
     @JvmOverloads
-    fun addBreakpoint(filePath: String?, line: Int, condition: String? = null): Optional<Int> {
+    fun addBreakpoint(filePath: String?, line: Line, condition: String? = null): Optional<Int> {
         if (filePath == null) {
             LOGGER.warn("Attempted to add breakpoint with null file path")
             return Optional.empty()
@@ -231,13 +234,13 @@ object BreakpointManager {
     @JvmStatic
     fun contains(mcpath: String?, line: Int): Boolean {
         if (mcpath == null || byMcPath.isEmpty()) return false
-        return byMcPath[mcpath]?.breakpoints?.containsKey(line) ?: false
+        return byMcPath[mcpath]?.breakpoints?.containsKey(Line.inFile(line)) ?: false
     }
 
     /** The unique ID of the breakpoint at [mcpath]:[line], or empty. */
     @JvmStatic
-    fun getBreakpointId(mcpath: String?, line: Int): Optional<Int> {
-        if (mcpath == null) return Optional.empty()
+    fun getBreakpointId(mcpath: String?, line: Line?): Optional<Int> {
+        if (mcpath == null || line == null) return Optional.empty()
         return Optional.ofNullable(byMcPath[mcpath]?.breakpoints?.get(line)).map { it.id }
     }
 
