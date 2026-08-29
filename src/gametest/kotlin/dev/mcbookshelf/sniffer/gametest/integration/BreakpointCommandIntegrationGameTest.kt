@@ -125,7 +125,7 @@ class BreakpointCommandIntegrationGameTest : AbstractDapIntegrationGameTest() {
         session.run("data remove storage $COND_STORAGE flag")
 
         helper.startSequence()
-            // The argument of `breakpoint` is a command read on its success channel, exactly like a DAP breakpoint condition.
+            // `breakpoint if` reads a real command on its success channel, exactly like a DAP breakpoint condition.
             .thenExecute { session.run("function $CONDITIONAL_TRIGGER") }
             .thenWaitUntil { assertThat(session).hasExecuted("before_trigger", "after_trigger") }
             .thenExecute {
@@ -146,8 +146,8 @@ class BreakpointCommandIntegrationGameTest : AbstractDapIntegrationGameTest() {
     fun aTriggerWhoseConditionIsNotACommandSaysSoAndDoesNotHalt(helper: GameTestHelper) {
         val session = DebugSession(helper)
 
-        // Nothing validated this one ahead of time, so the only place the typo can be reported is here.
-        val feedback = session.runCapturing("breakpoint not_a_command")
+        // The condition is parsed as a command, so the typo is a plain parse error of the whole line.
+        val feedback = session.runCapturing("breakpoint if not_a_command")
 
         assertTrue(feedback.isNotEmpty(), "An unparseable condition should be reported")
         assertThat(session).isNotPaused("An unparseable condition should not halt execution")
@@ -160,14 +160,14 @@ class BreakpointCommandIntegrationGameTest : AbstractDapIntegrationGameTest() {
         val dispatcher = session.server.commands.dispatcher
         val source = session.server.createCommandSourceStack()
 
-        val partial = "breakpoint exec"
+        val partial = "breakpoint if exec"
         val suggestions = dispatcher.getCompletionSuggestions(dispatcher.parse(partial, source)).join()
         assertTrue(suggestions.list.any { it.text == "execute" }, "The condition should be completed from the command tree")
         // Only the half typed command word may be replaced, or accepting a suggestion would eat the `/breakpoint` in front of it.
         assertEquals(suggestions.range.start, partial.indexOf("exec"), "suggestion start")
 
         // Completion follows the command into its own arguments, which is the whole point of borrowing the real tree.
-        val nested = "breakpoint execute if "
+        val nested = "breakpoint if execute if "
         val nestedSuggestions = dispatcher.getCompletionSuggestions(dispatcher.parse(nested, source)).join()
         assertTrue(nestedSuggestions.list.any { it.text == "score" }, "The condition's own arguments should be completed too")
         helper.succeed()
