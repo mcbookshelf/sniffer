@@ -17,12 +17,12 @@ You can find below all the subcommands available.
 
 ### Trigger
 
-```{describe} /breakpoint [<condition>]
+```{describe} /breakpoint [if <condition>]
 
 Halt the execution at this line, and tell every player about it.
 
 :Arguments:
-  **`condition`**: A command whose success decides whether to halt. Always halts when omitted.
+  **`condition`**: A command whose success decides whether to halt. Always halts when `if` is omitted.
 
 :Note:
   Where the halt happens depends on where the command comes from. See below.
@@ -44,12 +44,11 @@ say 2
 *Example: halt only for a player whose score is within a range:*
 
 ```mcfunction
-#!breakpoint execute if score @s test matches 1..10
+#!breakpoint if execute if score @s test matches 1..10
 ```
 
-The condition is an ordinary command, read on the success channel exactly like a breakpoint condition set from the editor: the halt happens only when it succeeds.
+After `if`, you write an ordinary command, read on the success channel exactly like a breakpoint condition set from the editor: the halt happens only when it succeeds.
 A condition that simply fails says nothing, so a breakpoint left in a function running every tick stays quiet.
-A condition that cannot be run at all, a typo in the command for instance, is reported to whoever triggered it, since nothing checked it beforehand.
 
 ---
 

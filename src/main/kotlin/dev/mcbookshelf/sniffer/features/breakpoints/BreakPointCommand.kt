@@ -45,12 +45,9 @@ object BreakPointCommand {
                     .requires { it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER) }
                     .executes { context -> triggerBreakpoint(context.source) }
                     .then(
-                        // The condition is a command read on its success channel, the same thing a DAP breakpoint condition is.
-                        Commands.argument("condition", StringArgumentType.greedyString())
-                            .suggests(ConditionSuggestionProvider)
-                            .executes { context ->
-                                triggerBreakpoint(context.source, StringArgumentType.getString(context, "condition"))
-                            }
+                        // The condition is a real command read on its success channel, parsed and completed as one.
+                        // forward rather than fork: it keeps its own result and error handling.
+                        Commands.literal("if").forward(dispatcher.root, ConditionModifier, false)
                     )
                     .then(
                         Commands.literal("step")
@@ -143,19 +140,9 @@ object BreakPointCommand {
         }
     }
 
-    /**
-     * Dispatches [TriggerBreakpointInput] and announces the halt to every player, if there was one.
-     *
-     * A condition that simply failed says nothing, so `#!breakpoint <command>` in a hot function does not spam.
-     * One that could not be run at all is reported to the caller, since nothing validated it beforehand.
-     */
-    private fun triggerBreakpoint(source: CommandSourceStack, condition: String? = null): Int {
-        val output = dispatch(TriggerBreakpointInput(condition), source) as TriggerBreakpointOutput
-        if (output.error != null) {
-            source.sendFailure(Component.translatable("sniffer.commands.breakpoint.condition.error", output.error))
-            return 0
-        }
-        if (!output.triggered) return 0
+    /** Dispatches [TriggerBreakpointInput] and announces the halt to every player. */
+    internal fun triggerBreakpoint(source: CommandSourceStack): Int {
+        dispatch(TriggerBreakpointInput, source)
         for (player in source.server.playerList.players) {
             player.sendSystemMessage(Component.translatable("sniffer.commands.breakpoint.set"))
         }

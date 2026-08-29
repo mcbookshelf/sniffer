@@ -6,7 +6,6 @@
   "sniffer.commands.assert.failed.stack": "Stack trace: ",
   "sniffer.commands.assert.failed.unknown_error": "Unknown error",
   "sniffer.commands.assert.passed": "Assert passed",
-  "sniffer.commands.breakpoint.condition.error": "Invalid breakpoint condition: %s",
   "sniffer.commands.breakpoint.get": "Argument %s has the following value: %s",
   "sniffer.commands.breakpoint.get.fail.error": "Unexpected error while getting the value of argument: %s",
   "sniffer.commands.breakpoint.get.fail.not_macro": "Current function is not a macro",

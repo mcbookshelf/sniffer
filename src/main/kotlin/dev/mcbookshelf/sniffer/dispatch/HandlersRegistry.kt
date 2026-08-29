@@ -37,7 +37,7 @@ fun buildHandlers(): List<Handler<*>> {
         PauseHandler(),
         ResetSteppingHandler(),
         SetDebugModeHandler(),
-        TriggerBreakpointHandler(BreakpointManager),
+        TriggerBreakpointHandler(),
         GetVariableHandler(),
         GetAllVariablesHandler(),
         GetStackHandler(),
