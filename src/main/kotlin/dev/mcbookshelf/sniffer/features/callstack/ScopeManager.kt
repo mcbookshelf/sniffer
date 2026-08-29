@@ -1,6 +1,7 @@
 package dev.mcbookshelf.sniffer.features.callstack
 
 import net.minecraft.commands.ExecutionCommandSource
+import net.minecraft.commands.execution.ExecutionContext
 import net.minecraft.nbt.CompoundTag
 import java.util.Optional
 import kotlin.collections.ArrayDeque
@@ -8,6 +9,7 @@ import kotlin.collections.HashMap
 import kotlin.collections.List
 import kotlin.collections.forEach
 import kotlin.collections.listOf
+import kotlin.collections.mutableSetOf
 import kotlin.collections.reversed
 import kotlin.collections.set
 import dev.mcbookshelf.sniffer.features.source.FunctionPathRegistry
@@ -32,6 +34,7 @@ class ScopeManager private constructor() {
     private val stack = ArrayDeque<DebugScope>()
     private val scopesById = HashMap<Int, DebugScope>()
     private var _currentScope: DebugScope? = null
+    private val observers = mutableSetOf<ControlFlowObserver>()
 
     /** The scope on top of the stack, as an [Optional] for Java interop. */
     val currentScope: Optional<DebugScope>
@@ -51,10 +54,12 @@ class ScopeManager private constructor() {
         stack.addLast(scope)
         scopesById[scope.id] = scope
         _currentScope = scope
+        this.observers.toList().forEach { it.onNewScope(scope) }
     }
 
     fun unscope() {
         val top = stack.removeLastOrNull() ?: return
+        this.observers.toList().forEach { it.onUnscope(top) }
         invalidate(top)
         registry.drop(listOf(top.id))
         scopesById.remove(top.id)
@@ -74,6 +79,7 @@ class ScopeManager private constructor() {
         scopesById.clear()
         _currentScope = null
         registry.clear()
+        observers.toList().forEach { it.onClear() }
     }
 
     fun getScope(id: Int): Optional<DebugScope> = Optional.ofNullable(scopesById[id])
@@ -101,6 +107,19 @@ class ScopeManager private constructor() {
 
     val debugScopes: List<DebugScope>
         get() = stack.reversed()
+
+    /** Tells the observers that [context] is over, see [ControlFlowObserver.onExecutionComplete]. */
+    fun executionComplete(context: ExecutionContext<*>) {
+        observers.toList().forEach { it.onExecutionComplete(context) }
+    }
+
+    fun observe(observer: ControlFlowObserver) {
+        observers.add(observer)
+    }
+
+    fun unobserve(observer: ControlFlowObserver) {
+        observers.remove(observer)
+    }
 
     companion object {
         @JvmStatic

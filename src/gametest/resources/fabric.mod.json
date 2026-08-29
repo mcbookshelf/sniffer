@@ -45,6 +45,10 @@
 			{
 				"adapter": "kotlin",
 				"value": "dev.mcbookshelf.sniffer.gametest.integration.DebugModeCommandIntegrationGameTest"
+			},
+			{
+				"adapter": "kotlin",
+				"value": "dev.mcbookshelf.sniffer.gametest.integration.TraceIntegrationGameTest"
 			}
 		]
 	},

@@ -11,3 +11,4 @@ tsconfig.json
 out
 sampleWebWorkerWorkspace
 sampleWorkspace
+dist/*.test.cjs

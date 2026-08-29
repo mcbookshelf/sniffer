@@ -1,5 +1,9 @@
 package dev.mcbookshelf.sniffer
 
+import dev.mcbookshelf.sniffer.config.DebuggerConfig
+import dev.mcbookshelf.sniffer.dap.WebSocketServer
+import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
+import dev.mcbookshelf.sniffer.network.*
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
@@ -8,14 +12,6 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.fabricmc.fabric.api.particle.v1.FabricParticleTypes
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper
-import dev.mcbookshelf.sniffer.config.DebuggerConfig
-import dev.mcbookshelf.sniffer.dap.WebSocketServer
-import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
-import dev.mcbookshelf.sniffer.network.AuthPromptPayload
-import dev.mcbookshelf.sniffer.network.AuthResponsePayload
-import dev.mcbookshelf.sniffer.network.SetDapConnectedPayload
-import dev.mcbookshelf.sniffer.network.SetDebugModePayload
-import dev.mcbookshelf.sniffer.network.SetDebuggingPayload
 import net.minecraft.commands.synchronization.SingletonArgumentInfo
 import net.minecraft.core.Registry
 import net.minecraft.core.particles.SimpleParticleType
@@ -45,6 +41,7 @@ import dev.mcbookshelf.sniffer.features.source.FunctionPathGetter
 import dev.mcbookshelf.sniffer.features.source.FunctionPathRegistry
 import dev.mcbookshelf.sniffer.features.stepping.PausedExecutionStore
 import dev.mcbookshelf.sniffer.features.stepping.SteppingState
+import dev.mcbookshelf.sniffer.features.trace.TraceCommand
 
 /**
  * Entrypoint of the mod, wiring the debugger to the server lifecycle.
@@ -174,5 +171,6 @@ class Sniffer : ModInitializer {
         JvmtimerCommand.onInitialize()
         WatchCommand.onInitialize()
         DebugModeCommand.onInitialize()
+        TraceCommand.onInitialize()
     }
 }

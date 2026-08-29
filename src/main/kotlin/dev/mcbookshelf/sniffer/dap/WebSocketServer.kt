@@ -1,23 +1,22 @@
 package dev.mcbookshelf.sniffer.dap
 
-import jakarta.websocket.*
-import jakarta.websocket.server.ServerApplicationConfig
-import jakarta.websocket.server.ServerEndpointConfig
 import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
+import dev.mcbookshelf.sniffer.features.callstack.ClearScopesInput
 import dev.mcbookshelf.sniffer.features.stepping.ContinueInput
-import dev.mcbookshelf.sniffer.network.AuthPromptPayload
+import dev.mcbookshelf.sniffer.features.stepping.ResetSteppingInput
 import dev.mcbookshelf.sniffer.features.stepping.SteppingState
+import dev.mcbookshelf.sniffer.network.AuthPromptPayload
+import jakarta.websocket.*
+import jakarta.websocket.server.ServerApplicationConfig
+import jakarta.websocket.server.ServerEndpointConfig
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.server.players.NameAndId
-import org.eclipse.lsp4j.debug.launch.DSPLauncher
-import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
 import org.glassfish.tyrus.server.Server
 import org.slf4j.LoggerFactory
-import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -107,7 +106,7 @@ class WebSocketServer : Endpoint() {
     }
 
     private var dapServer: DapServer? = null
-    private var launcher: Launcher<IDebugProtocolClient>? = null
+    private var launcher: Launcher<DapRemote>? = null
 
     // Bounded so an unauthenticated client cannot grow the heap while the approval prompt is pending.
     private val messageQueue = LinkedBlockingQueue<ByteArray>(MAX_QUEUED_MESSAGES)
@@ -220,8 +219,16 @@ class WebSocketServer : Endpoint() {
         dapServer = DapServer()
         val `in` = WebSocketInputStream(messageQueue)
         val out = WebSocketOutputStream(session)
-        launcher = DSPLauncher.createServerLauncher(dapServer, `in`, out)
-        dapServer!!.setClient(launcher!!.remoteProxy)
+        launcher = DebugLauncher.Builder<DapRemote>()
+            .setLocalServices(DapEndpointsRegistry.buildLocalServices(dapServer!!))
+            .setRemoteInterfaces(DapEndpointsRegistry.buildRemoteInterfaces())
+            // Required: with more than one remote interface LSP4J proxies through this loader, and defaults it to null.
+            .setClassLoader(DapEndpointsRegistry::class.java.classLoader)
+            .setInput(`in`)
+            .setOutput(out)
+            .create()
+        DapClient.attach(launcher!!.remoteProxy)
+        DapClient.of(StandardDapClient::class.java)?.let { dapServer!!.setClient(it) }
         launcher!!.startListening()
     }
 
@@ -245,7 +252,6 @@ class WebSocketServer : Endpoint() {
                 SnifferDispatcher.get().dispatch(ContinueInput, Context(server.createCommandSourceStack()))
             }
         }
-        SteppingState.resetAll()
         cleanup()
     }
 
@@ -257,6 +263,9 @@ class WebSocketServer : Endpoint() {
 
     private fun cleanup() {
         ConnectionState.setConnected(false)
+        // Detach first, so anything the session ends below writes to nobody rather than to a dead socket.
+        DapClient.detach()
+        endDebugSession()
 
         dapServer?.let {
             try {
@@ -281,6 +290,21 @@ class WebSocketServer : Endpoint() {
         }
 
         launcher = null
+    }
+
+    /**
+     * Ends the debug session the editor was driving, through the dispatcher rather than by reaching into
+     * the state of each feature.
+     * Clearing the scopes is what tells the observers of the control flow that what they were following is over,
+     * which nothing else on this path does.
+     */
+    private fun endDebugSession() {
+        val source = runCatching { ServerReference.getCommandSource() }.getOrNull() ?: return
+        val context = Context(source)
+        runCatching {
+            SnifferDispatcher.get().dispatch(ResetSteppingInput, context)
+            SnifferDispatcher.get().dispatch(ClearScopesInput, context)
+        }.onFailure { logger.warn("Could not end the debug session cleanly", it) }
     }
 
     /**

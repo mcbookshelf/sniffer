@@ -24,11 +24,11 @@ Sniffer comes in two parts:
 <table>
   <tr>
     <td align="center" nowrap>🧩 <b>Mod</b></td>
-    <td>Runs inside Minecraft and exposes the game as a Debug Adapter Protocol server. Also adds the in game debug commands (<code>/breakpoint</code>, <code>#!log</code>, <code>#!assert</code>, ...) and hot reload of edited functions.</td>
+    <td>Runs inside Minecraft and exposes the game as a Debug Adapter Protocol server. Also adds the in game debug commands (<code>/breakpoint</code>, <code>/trace</code>, <code>#!log</code>, <code>#!assert</code>, ...) and hot reload of edited functions.</td>
   </tr>
   <tr>
     <td align="center" nowrap>🔌 <b>Extension</b></td>
-    <td>Connects VS Code to a running game, so breakpoints, stepping and variable inspection work in <code>.mcfunction</code> files the way they do in any other language.</td>
+    <td>Connects VS Code to a running game, so breakpoints, stepping, variable inspection and the call graph of a traced execution work in <code>.mcfunction</code> files the way they do in any other language.</td>
   </tr>
 </table>
 
@@ -53,8 +53,8 @@ Set a breakpoint in a `.mcfunction` file, call that function with `/function`, a
 ## Documentation
 
 - [Quickstart](docs/quickstart.md) — install and first breakpoint
-- [VS Code](docs/vscode.md) — launch configuration, debug toolbar, variables, breakpoint kinds
-- [Commands](docs/commands/index.md) — `/breakpoint`, `#!log`, `#!assert`, `#!watch`, ...
+- [VS Code](docs/vscode.md) — launch configuration, debug toolbar, variables, breakpoint kinds, trace graph
+- [Commands](docs/commands/index.md) — `/breakpoint`, `/trace`, `#!log`, `#!assert`, `#!watch`, ...
 - [Expressions](docs/commands/expression.md) — the `{ ... }` mini language reading scores, NBT and entity names
 - [Contributing](.github/CONTRIBUTING.md) — building the mod and running the tests
 

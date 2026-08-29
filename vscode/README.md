@@ -17,6 +17,7 @@
 
 Sniffer turns a running Minecraft game into a debugger for your `.mcfunction` datapacks.
 This extension is the VS Code side of it: it attaches to a game running the [Sniffer mod](https://github.com/mcbookshelf/sniffer) over the Debug Adapter Protocol, so breakpoints, stepping and variable inspection work in `.mcfunction` files the way they do in any other language.
+It also draws the call graph of a traced execution, to see which functions a command actually went through.
 
 ![A function paused on a breakpoint](https://raw.githubusercontent.com/mcbookshelf/sniffer/master/docs/_static/images/vscode-running.png)
 
