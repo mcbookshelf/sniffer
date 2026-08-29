@@ -6,7 +6,6 @@ import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.logging.LogUtils
 import io.methvin.watcher.DirectoryChangeEvent
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import dev.mcbookshelf.sniffer.accessor.CommandFunctionUniqueAccessors
 import dev.mcbookshelf.sniffer.mixin.ServerFunctionLibraryAccessors
 import dev.mcbookshelf.sniffer.mixin.ServerFunctionManagerAccessors
@@ -30,6 +29,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import dev.mcbookshelf.sniffer.command.SnifferCommand
 
 /**
  * The `/watch` command, which hot reloads datapack functions.
@@ -40,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
  * @author Alumopper
  * @author theogiraudet
  */
-object WatchCommand {
+object WatchCommand : SnifferCommand {
 
     private enum class State { CREATED, MODIFIED, DELETED }
 
@@ -57,58 +58,50 @@ object WatchCommand {
     private const val MODIFIED_COLOR = "#D1A21E"
     private const val DELETED_COLOR = "#B61212"
 
-    @JvmStatic
-    fun onInitialize(){
-        CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
-            dispatcher.register(
-                literal<CommandSourceStack>("watch")
-                    .requires{it.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)}
-                    .then(literal<CommandSourceStack>("start")
-                        .then(argument("id", StringArgumentType.string())
-                            .suggests(DatapackIDSuggestionProvider)
-                            .executes {
-                                val id = StringArgumentType.getString(it ,"id")
-                                val src = it.source
-                                val server = src.server
-                                return@executes startWatch(server, src, id)
-                            }
-                        )
-                    ).then(literal<CommandSourceStack>("stop")
-                        .then(argument("id", StringArgumentType.string())
-                            .suggests(DatapackIDSuggestionProvider)
-                            .executes {
-                                val id = StringArgumentType.getString(it ,"id")
-                                val src = it.source
-                                return@executes stopWatch(src, id)
-                            }
-                        )
-                    ).then(literal<CommandSourceStack>("auto")
-                        .then(argument("bool", BoolArgumentType.bool())
-                            .executes {
-                                val bool = BoolArgumentType.getBool(it, "bool")
-                                isAutoReload = bool
-                                if(isAutoReload){
-                                    it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto.enable")}, false)
-                                }else{
-                                    it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto.disable")}, false)
-                                }
-                                return@executes 1
-                            }
-                        ).executes {
-                            it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto", isAutoReload) }, false)
-                            return@executes 1
+    override fun build(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> =
+        literal<CommandSourceStack>("watch")
+            .then(literal<CommandSourceStack>("start")
+                .then(argument("id", StringArgumentType.string())
+                    .suggests(DatapackIDSuggestionProvider)
+                    .executes {
+                        val id = StringArgumentType.getString(it ,"id")
+                        val src = it.source
+                        val server = src.server
+                        return@executes startWatch(server, src, id)
+                    }
+                )
+            ).then(literal<CommandSourceStack>("stop")
+                .then(argument("id", StringArgumentType.string())
+                    .suggests(DatapackIDSuggestionProvider)
+                    .executes {
+                        val id = StringArgumentType.getString(it ,"id")
+                        val src = it.source
+                        return@executes stopWatch(src, id)
+                    }
+                )
+            ).then(literal<CommandSourceStack>("auto")
+                .then(argument("bool", BoolArgumentType.bool())
+                    .executes {
+                        val bool = BoolArgumentType.getBool(it, "bool")
+                        isAutoReload = bool
+                        if(isAutoReload){
+                            it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto.enable")}, false)
+                        }else{
+                            it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto.disable")}, false)
                         }
-                    ).then(literal<CommandSourceStack>("reload")
-                        .executes {
-                            it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.hot_reload")}, false)
-                            hotReload(it.source.server)
-                            return@executes 1
-                        }
-                    )
-
+                        return@executes 1
+                    }
+                ).executes {
+                    it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto", isAutoReload) }, false)
+                    return@executes 1
+                }
+            ).then(literal<CommandSourceStack>("reload")
+                .executes {
+                    it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.hot_reload")}, false)
+                    hotReload(it.source.server)
+                    return@executes 1
+                }
             )
-        }
-    }
 
     private fun startWatch(server: MinecraftServer, src: CommandSourceStack, id: String): Int{
         try{
