@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import dev.mcbookshelf.sniffer.Sniffer
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 import dev.mcbookshelf.sniffer.client.auth.AuthPromptScreen
 import dev.mcbookshelf.sniffer.client.state.ClientConnectionState
 import dev.mcbookshelf.sniffer.client.state.ClientDebuggingState
@@ -80,15 +81,14 @@ class SnifferClient : ClientModInitializer {
             if (Minecraft.getInstance().hasSingleplayerServer()) {
                 val port = Sniffer.webSocketServer?.port ?: return@register
                 val player = client.player ?: return@register
-                player.sendSystemMessage(
-                    Component.literal("Sniffer Server is running on port: ")
-                        .append(
-                            Component.literal("[$port]").withStyle { style ->
-                                style.withColor(CommonColors.GREEN)
-                                    .withHoverEvent(HoverEvent.ShowText(Component.literal("Click to copy")))
-                                    .withClickEvent(ClickEvent.CopyToClipboard(port.toString()))
-                            }
-                        )
+                SnifferChat.tell(
+                    player,
+                    "sniffer.dap.listening",
+                    Component.literal("$port").withStyle { style ->
+                        style.withColor(CommonColors.GREEN)
+                            .withHoverEvent(HoverEvent.ShowText(Component.translatable("sniffer.dap.listening.copy")))
+                            .withClickEvent(ClickEvent.CopyToClipboard(port.toString()))
+                    }
                 )
             }
         }

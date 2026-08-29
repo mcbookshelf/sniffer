@@ -8,7 +8,7 @@ import net.minecraft.commands.execution.ChainModifiers
 import net.minecraft.commands.execution.CustomModifierExecutor
 import net.minecraft.commands.execution.ExecutionControl
 import net.minecraft.commands.execution.tasks.BuildContexts
-import net.minecraft.network.chat.Component
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * Opens the trace, hands the rest of the command to vanilla, and queues the entry that closes it.
@@ -32,7 +32,7 @@ object TraceModifier : CustomModifierExecutor.ModifierAdapter<CommandSourceStack
         val command = currentStep.topContext.input.substring(traced.topContext.range.start)
 
         if (!callsAFunction(traced)) {
-            originalSource.sendFailure(Component.translatable("sniffer.commands.trace.no_function"))
+            SnifferChat.fail(originalSource, "sniffer.commands.trace.no_function")
             return
         }
 
@@ -42,7 +42,7 @@ object TraceModifier : CustomModifierExecutor.ModifierAdapter<CommandSourceStack
             else -> null
         }
         if (refusal != null) {
-            originalSource.sendFailure(Component.translatable("sniffer.commands.trace.$refusal"))
+            SnifferChat.fail(originalSource, "sniffer.commands.trace.$refusal")
             return
         }
 

@@ -260,7 +260,7 @@ class BreakpointCommandIntegrationGameTest : AbstractDapIntegrationGameTest() {
     fun stackOnAnEmptyCallStackPrintsJustTheHeader(helper: GameTestHelper) {
         val session = DebugSession(helper)
 
-        assertEquals(session.runCapturing("breakpoint stack"), listOf("\nCall stack:\n"), "stack output")
+        assertEquals(session.runCapturing("breakpoint stack"), listOf("[Sniffer] \nCall stack:\n"), "stack output")
         helper.succeed()
     }
 

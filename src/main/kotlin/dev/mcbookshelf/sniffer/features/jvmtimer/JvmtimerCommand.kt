@@ -15,6 +15,7 @@ import kotlin.math.min
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import dev.mcbookshelf.sniffer.command.SnifferCommand
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * The `/jvmtimer` command, which times datapack functions from the JVM side.
@@ -36,7 +37,7 @@ object JvmtimerCommand : SnifferCommand {
                     .executes {
                         val id = StringArgumentType.getString(it, "id")
                         getTimer(id).start()
-                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.started", id) }, false)
+                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.started", id)
                         1
                     }
                 )
@@ -46,7 +47,7 @@ object JvmtimerCommand : SnifferCommand {
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
                         getTimer(id).end()
-                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.stopped", id) }, false)
+                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.stopped", id)
                         1
                     }
                 )
@@ -65,7 +66,7 @@ object JvmtimerCommand : SnifferCommand {
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
                         getTimer(id).reset()
-                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.reset", id) }, false)
+                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.reset", id)
                         1
                     }
                 )
@@ -75,7 +76,7 @@ object JvmtimerCommand : SnifferCommand {
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
                         getTimer(id).disable()
-                        it.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.disable", id) }, false)
+                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.disable", id)
                         1
                     }
                 )
@@ -126,11 +127,11 @@ object JvmtimerCommand : SnifferCommand {
 
         fun get(ctx: CommandContext<CommandSourceStack>){
             if(count == 0){
-                ctx.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.not_started", id) }, false)
+                SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.not_started", id)
                 return
             }
             if(!enabled){
-                ctx.source.sendSuccess({ Component.translatable("sniffer.commands.jvmtimer.disable", id) }, false)
+                SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.disable", id)
                 return
             }
             val text = Component.empty()
@@ -139,7 +140,7 @@ object JvmtimerCommand : SnifferCommand {
                 .desc("sniffer.commands.jvmtimer.info.count").value(count.toString())
                 .desc("sniffer.commands.jvmtimer.info.average").value("${totalTime / count / 1_000_000.0}ms")
                 .desc("sniffer.commands.jvmtimer.info.max_min").value("${maxTime / 1_000.0}μs/${minTime / 1_000.0}μs")
-            ctx.source.sendSuccess({ text }, false)
+            SnifferChat.reply(ctx.source, text)
         }
         fun reset(){
             startTime = -1L

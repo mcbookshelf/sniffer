@@ -1,9 +1,8 @@
 package dev.mcbookshelf.sniffer.dap
 
-import dev.mcbookshelf.sniffer.util.Extension.addSnifferPrefix
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 import jakarta.websocket.CloseReason
 import jakarta.websocket.Session
-import net.minecraft.network.chat.Component
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -158,7 +157,7 @@ object PendingAuthRegistry {
         val server = runCatching { ServerReference.get() }.getOrNull() ?: return
         server.execute {
             val player = server.playerList.getPlayer(playerUuid) ?: return@execute
-            player.sendSystemMessage(addSnifferPrefix(Component.translatable("sniffer.auth.timed_out")))
+            SnifferChat.tell(player, "sniffer.auth.timed_out")
         }
     }
 

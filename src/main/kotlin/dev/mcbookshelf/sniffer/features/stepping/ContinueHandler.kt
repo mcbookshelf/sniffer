@@ -5,7 +5,7 @@ import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dap.DebugEventBus
-import net.minecraft.network.chat.Component
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * Resumes execution until the next breakpoint.
@@ -19,7 +19,7 @@ class ContinueHandler : Handler<ContinueInput> {
 
     override fun handle(input: ContinueInput, ctx: Context): Output {
         if (!SteppingState.isDebugging) {
-            ctx.source.sendFailure(Component.translatable("sniffer.commands.breakpoint.move.not_debugging"))
+            SnifferChat.fail(ctx.source, "sniffer.commands.breakpoint.move.not_debugging")
             return Ack
         }
 

@@ -3,11 +3,11 @@ package dev.mcbookshelf.sniffer.features.debugmode
 import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
 import net.minecraft.commands.Commands
-import net.minecraft.network.chat.Component
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import dev.mcbookshelf.sniffer.command.SnifferCommand
 import net.minecraft.commands.CommandSourceStack
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * The `/debugmode` command, which shows or hides the HUD overlay of the player running it.
@@ -25,9 +25,10 @@ object DebugModeCommand : SnifferCommand {
                             SetDebugModeInput(true),
                             Context(context.source)
                         )
-                        context.source.sendSuccess(
-                            { Component.translatable("sniffer.commands.debugmode.enable") },
-                            true
+                        SnifferChat.reply(
+                            context.source,
+                            "sniffer.commands.debugmode.enable",
+                            informAdmins = true
                         )
                         1
                     }
@@ -39,9 +40,10 @@ object DebugModeCommand : SnifferCommand {
                             SetDebugModeInput(false),
                             Context(context.source)
                         )
-                        context.source.sendSuccess(
-                            { Component.translatable("sniffer.commands.debugmode.disable") },
-                            true
+                        SnifferChat.reply(
+                            context.source,
+                            "sniffer.commands.debugmode.disable",
+                            informAdmins = true
                         )
                         1
                     }

@@ -4,7 +4,7 @@ import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.Ack
-import net.minecraft.network.chat.Component
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * Arms [SteppingState.pauseRequested], which `UnboundDebugMixin` consumes on the next line it checks.
@@ -18,7 +18,7 @@ class PauseHandler : Handler<PauseInput> {
 
     override fun handle(input: PauseInput, ctx: Context): Output {
         if (SteppingState.isDebugging) {
-            ctx.source.sendFailure(Component.translatable("sniffer.commands.breakpoint.pause.already"))
+            SnifferChat.fail(ctx.source, "sniffer.commands.breakpoint.pause.already")
             return Ack
         }
 

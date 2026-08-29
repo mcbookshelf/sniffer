@@ -9,6 +9,7 @@ import dev.mcbookshelf.sniffer.expression.LogArgumentType
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import dev.mcbookshelf.sniffer.command.SnifferCommand
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * The `/log` command, which evaluates a log expression and broadcasts the result to every player.
@@ -26,7 +27,7 @@ object LogCommand : SnifferCommand {
                         val data = l.get(it.source)
                         text.append(DebugData.toText(data))
                     }
-                    it.source.server.playerList.broadcastSystemMessage(text, false)
+                    SnifferChat.broadcast(it.source.server, text)
                     return@executes 1
                 }
             )

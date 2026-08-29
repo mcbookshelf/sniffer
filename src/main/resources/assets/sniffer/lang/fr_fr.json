@@ -60,5 +60,10 @@
   "sniffer.auth.reject": "Refuser (%s)",
   "sniffer.auth.timed_out": "La demande d'attachement du débogueur a expiré",
   "sniffer.name": "Sniffer",
-  "sniffer.step": "Pas à pas détaillé"
+  "sniffer.step": "Pas à pas détaillé",
+  "sniffer.commands.watcher.stopped.unexpectedly": "La surveillance de %s s'est arrêtée : %s",
+  "sniffer.dap.attached": "Connecté à l'éditeur",
+  "sniffer.dap.disconnected": "Déconnecté de l'éditeur",
+  "sniffer.dap.listening": "Débogueur à l'écoute sur le port %s",
+  "sniffer.dap.listening.copy": "Cliquer pour copier"
 }
