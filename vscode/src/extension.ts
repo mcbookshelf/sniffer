@@ -18,6 +18,7 @@
 import * as vscode from 'vscode';
 import { SocketDescriptorFactory } from './SocketDescriptorFactory';
 import { configureLaunch, offerSetup } from './configureLaunch';
+import { registerTrace } from './traceCommand';
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
     const socketDebugFactory = new SocketDescriptorFactory();
@@ -26,5 +27,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     context.subscriptions.push(
         vscode.commands.registerCommand('sniffer.configureLaunch', () => configureLaunch())
     );
+    registerTrace(context);
     await offerSetup(context);
 };

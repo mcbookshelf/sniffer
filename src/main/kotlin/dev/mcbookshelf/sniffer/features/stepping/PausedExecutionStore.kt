@@ -2,11 +2,7 @@ package dev.mcbookshelf.sniffer.features.stepping
 
 import dev.mcbookshelf.sniffer.accessor.ExecutionContextAccessor
 import net.minecraft.commands.ExecutionCommandSource
-import net.minecraft.commands.execution.CommandQueueEntry
-import net.minecraft.commands.execution.ExecutionContext
-import net.minecraft.commands.execution.EntryAction
-import net.minecraft.commands.execution.Frame
-import net.minecraft.commands.execution.UnboundEntryAction
+import net.minecraft.commands.execution.*
 import net.minecraft.server.MinecraftServer
 import org.slf4j.LoggerFactory
 

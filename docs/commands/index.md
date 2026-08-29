@@ -40,6 +40,11 @@ Expression
 : A `{ ... }` value read from the world, used by [`/log`](log) and [`/assert`](assert).
   See [Expressions](expression).
 
+Trace
+: The call graph of one execution, recorded as it runs and drawn in the editor.
+  Nothing is halted: where a breakpoint shows the state at one point, a trace shows the path that led there.
+  See [`/trace`](trace).
+
 ---
 
 ```{toctree}
@@ -47,6 +52,7 @@ Expression
 :caption: Debugging
 
 breakpoint
+trace
 debugmode
 ```
 

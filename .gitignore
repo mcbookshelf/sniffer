@@ -50,3 +50,6 @@ logs/
 
 # Sphinx docs
 docs/_build/
+
+# Python bytecode from the scripts directory
+__pycache__/

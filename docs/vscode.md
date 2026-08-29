@@ -121,3 +121,47 @@ To change the kind of a breakpoint, right-click it, then pick *Edit Breakpoint*.
 | Hit Count | ✕ | Pause only once the command has been reached a given number of times. Currently, the count is ignored, so the breakpoint pauses every time, like a standard one.                                                                                                                                                                                                |
 | Log Message | ✕ | Never pause, but log a message every time the command is reached. Currently, The message is ignored, and the breakpoint pauses instead of logging. Use the `#!log` debug command for that.                                                                                                                                                                      |
 | Wait for Breakpoint | ✓ | Stay inactive until another given breakpoint has been hit.                                                                                                                                                                                                                                                                                                      |
+
+
+## Trace
+
+A trace records which functions an execution enters, and draws them as a graph.
+It answers a different question from a breakpoint: not *what is the state here*, but *how did the game get here*.
+
+Start one from the command palette, with *Sniffer: Trace a command*, then type the command to trace exactly as you would in game:
+
+![The call graph of a traced execution](/_static/images/vscode-trace.png)
+
+```mcfunction
+function my_pack:main
+```
+
+The *Trace* tab opens beside your editor and fills in as the execution runs.
+It also opens on its own when a trace is started from inside the game with `/trace run`, so a trace launched from the chat still shows up here.
+
+### Reading the graph
+
+Each box is a function, and each arrow is a call.
+
+A function is drawn **once**, however many times it ran: a helper called from five places is one box with five arrows into it, and a recursive function has an arrow onto itself.
+What the merge would otherwise lose is written on the arrows, which carry the lines the call is written on and how many times it was taken.
+
+| On | What it says |
+| --- | --- |
+| A box | The function, the number of times it was entered, and the line the last one returned on. |
+| A dashed orange box | The function has not returned. While a breakpoint holds the execution, that is where it currently sits. |
+| An arrow | The lines the call is written on, and how many times it was taken. |
+| A purple arrow onto a box | The function calls itself. |
+
+The header states the traced command and whether the trace is running, completed, or was cut short.
+*Fit* puts the whole graph back in view after panning; the mouse wheel zooms and dragging moves.
+
+### Jumping to the code
+
+Clicking a **box** opens the function.
+
+Clicking an **arrow** opens the *calling* function on the line the call is written on, which is where the call site actually lives.
+An arrow standing for several call sites asks which one to open.
+
+A function loaded from a zipped datapack opens too, read back from the game rather than from disk, so it comes up read only.
+That needs the debug session to still be running: once it has ended, only the functions that live in a real file are left openable.

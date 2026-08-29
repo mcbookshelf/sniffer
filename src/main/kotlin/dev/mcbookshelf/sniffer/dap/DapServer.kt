@@ -1,13 +1,24 @@
 package dev.mcbookshelf.sniffer.dap
 
-import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.IInput
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
-import dev.mcbookshelf.sniffer.features.source.FunctionIdentity
+import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointSpec
+import dev.mcbookshelf.sniffer.features.breakpoints.SetBreakpointsInput
+import dev.mcbookshelf.sniffer.features.breakpoints.SetBreakpointsOutput
+import dev.mcbookshelf.sniffer.features.callstack.GetScopesInput
+import dev.mcbookshelf.sniffer.features.callstack.GetStackTraceInput
+import dev.mcbookshelf.sniffer.features.callstack.ScopesOutput
+import dev.mcbookshelf.sniffer.features.callstack.StackTraceOutput
+import dev.mcbookshelf.sniffer.features.evaluate.EvaluateInput
+import dev.mcbookshelf.sniffer.features.evaluate.EvaluateOutput
 import dev.mcbookshelf.sniffer.features.source.Line
-import dev.mcbookshelf.sniffer.features.source.RealPath
-import dev.mcbookshelf.sniffer.features.stepping.SteppingState
+import dev.mcbookshelf.sniffer.features.source.GetSourceInput
+import dev.mcbookshelf.sniffer.features.source.SourceFactory
+import dev.mcbookshelf.sniffer.features.source.SourceOutput
+import dev.mcbookshelf.sniffer.features.stepping.*
+import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesInput
+import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesOutput
 import dev.mcbookshelf.sniffer.features.variables.VariableNode
 import dev.mcbookshelf.sniffer.util.Extension.addSnifferPrefix
 import org.eclipse.lsp4j.debug.*
@@ -15,25 +26,6 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
-import java.util.function.Supplier
-import dev.mcbookshelf.sniffer.features.breakpoints.SetBreakpointsInput
-import dev.mcbookshelf.sniffer.features.callstack.GetScopesInput
-import dev.mcbookshelf.sniffer.features.callstack.GetStackTraceInput
-import dev.mcbookshelf.sniffer.features.evaluate.EvaluateInput
-import dev.mcbookshelf.sniffer.features.source.GetSourceInput
-import dev.mcbookshelf.sniffer.features.stepping.ContinueInput
-import dev.mcbookshelf.sniffer.features.stepping.PauseInput
-import dev.mcbookshelf.sniffer.features.stepping.StepInInput
-import dev.mcbookshelf.sniffer.features.stepping.StepOutInput
-import dev.mcbookshelf.sniffer.features.stepping.StepOverInput
-import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesInput
-import dev.mcbookshelf.sniffer.features.breakpoints.SetBreakpointsOutput
-import dev.mcbookshelf.sniffer.features.callstack.ScopesOutput
-import dev.mcbookshelf.sniffer.features.callstack.StackTraceOutput
-import dev.mcbookshelf.sniffer.features.evaluate.EvaluateOutput
-import dev.mcbookshelf.sniffer.features.source.SourceOutput
-import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesOutput
-import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointSpec
 
 /**
  * Debug Adapter Protocol server backed by LSP4J.
@@ -44,7 +36,7 @@ import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointSpec
  * @author theogiraudet
  * @author Alumopper
  */
-class DapServer : IDebugProtocolServer {
+class DapServer : IDebugProtocolServer, DapService {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger("sniffer")
@@ -66,8 +58,6 @@ class DapServer : IDebugProtocolServer {
      * One DAP `sourceReference` per function packed in a zip, since clients cache source content by reference.
      * Only touched from the server thread.
      */
-    private val zipSourceReferences = HashMap<String, Int>()
-    private var nextZipSourceReference = 1
 
     init {
         DebugEventBus.onStop(::onStop)
@@ -238,7 +228,7 @@ class DapServer : IDebugProtocolServer {
                     id = data.id
                     name = data.identity.minecraftPath
                     line = data.line?.inEditor ?: 0
-                    source = toSource(data.identity)
+                    source = SourceFactory.toSource(data.identity)
                 }
             }
 
@@ -275,7 +265,7 @@ class DapServer : IDebugProtocolServer {
                     presentationHint = "locals"
                     namedVariables = data.variableCount
                     variablesReference = data.id
-                    source = toSource(data.identity)
+                    source = SourceFactory.toSource(data.identity)
                 }
             }
 
@@ -384,22 +374,9 @@ class DapServer : IDebugProtocolServer {
         })
     }
 
-    /**
-     * Runs [block] on the Minecraft server thread and completes the returned future with its result.
-     * DAP requests arrive on WebSocket threads and the world keeps ticking while the debugger is paused,
-     * so everything reading live game state has to go through here.
-     */
-    private fun <T> onServerThread(block: () -> T): CompletableFuture<T> {
-        val server = runCatching { ServerReference.get() }.getOrNull()
-            ?: return CompletableFuture.failedFuture(IllegalStateException("Minecraft server not available"))
-        // MinecraftServer is an Executor running submitted tasks on the server thread, or inline if already on it.
-        return CompletableFuture.supplyAsync(Supplier { block() }, server)
-    }
+    private fun <T> onServerThread(block: () -> T): CompletableFuture<T> = DapDispatch.onServerThread(block)
 
-    private fun dispatch(input: IInput): Output {
-        val source = ServerReference.getCommandSource()
-        return SnifferDispatcher.get().dispatch(input, Context(source))
-    }
+    private fun dispatch(input: IInput): Output = DapDispatch.dispatch(input)
 
     private fun dispatchAction(input: IInput, label: String) {
         try {
@@ -407,24 +384,6 @@ class DapServer : IDebugProtocolServer {
         } catch (e: Exception) {
             LOGGER.warn("Error during {} execution", label, e)
         }
-    }
-
-    private fun toSource(identity: FunctionIdentity): Source {
-        val source = Source().apply {
-            name = identity.minecraftPath
-        }
-        val real = identity.realPath
-        if (real != null) {
-            when (real.kind) {
-                RealPath.Kind.DIRECTORY -> source.path = real.path
-                RealPath.Kind.ZIP -> {
-                    source.sourceReference =
-                        zipSourceReferences.getOrPut(identity.minecraftPath) { nextZipSourceReference++ }
-                    source.path = real.path
-                }
-            }
-        }
-        return source
     }
 
     private fun toDapVariable(variable: VariableNode): Variable {

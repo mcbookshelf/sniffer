@@ -1,6 +1,7 @@
 package dev.mcbookshelf.sniffer.mixin;
 
 import dev.mcbookshelf.sniffer.accessor.ExecutionContextAccessor;
+import dev.mcbookshelf.sniffer.features.callstack.ScopeManager;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.CommandQueueEntry;
@@ -97,12 +98,18 @@ public abstract class InitialFunctionCallMixin<T> implements ExecutionContextAcc
     /**
      * Keeps the context alive while it is stashed, since a pause spans several server ticks.
      * The resume path closes it once its queue has drained.
+     *
+     * <p>A close that is not skipped is this execution genuinely ending, however it ended: drained to the last
+     * entry, dropped, or cut short by a top level {@code /return} discarding the queue.
+     * It is the only signal that covers all three, so it is what the observers of the control flow are told on.
      */
     @Inject(method = "close", at = @At("HEAD"), cancellable = true)
     private void sniffer$skipCloseWhileStashed(CallbackInfo ci) {
         if (sniffer$stashed) {
             ci.cancel();
+            return;
         }
+        ScopeManager.Companion.get().executionComplete((ExecutionContext<?>) (Object) this);
     }
 
     @Inject(method = "queueInitialFunctionCall", at = @At("HEAD"), cancellable = true)

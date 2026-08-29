@@ -5,6 +5,7 @@ import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
 import dev.mcbookshelf.sniffer.features.breakpoints.BreakpointManager
 import dev.mcbookshelf.sniffer.features.breakpoints.SetBreakpointsHandler
 import dev.mcbookshelf.sniffer.features.breakpoints.TriggerBreakpointHandler
+import dev.mcbookshelf.sniffer.features.callstack.ClearScopesHandler
 import dev.mcbookshelf.sniffer.features.callstack.GetScopesHandler
 import dev.mcbookshelf.sniffer.features.callstack.GetStackHandler
 import dev.mcbookshelf.sniffer.features.callstack.GetStackTraceHandler
@@ -20,6 +21,9 @@ import dev.mcbookshelf.sniffer.features.stepping.StepOverHandler
 import dev.mcbookshelf.sniffer.features.variables.GetAllVariablesHandler
 import dev.mcbookshelf.sniffer.features.variables.GetVariableHandler
 import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesHandler
+import dev.mcbookshelf.sniffer.dap.DapClient
+import dev.mcbookshelf.sniffer.features.trace.TraceClient
+import dev.mcbookshelf.sniffer.features.trace.TraceHandler
 
 /**
  * Wires every [Handler] with the services it needs and returns the list the dispatcher is built from.
@@ -44,8 +48,10 @@ fun buildHandlers(): List<Handler<*>> {
         SetBreakpointsHandler(BreakpointManager),
         GetStackTraceHandler(scopeManager),
         GetScopesHandler(scopeManager),
+        ClearScopesHandler(scopeManager),
         ResolveVariablesHandler(scopeManager),
         EvaluateHandler(scopeManager, evaluationSession),
         GetSourceHandler(),
+        TraceHandler { DapClient.of(TraceClient::class.java) },
     )
 }

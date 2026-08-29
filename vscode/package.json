@@ -28,20 +28,23 @@
   "scripts": {
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/webview/tsconfig.json --noEmit",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node --outfile=dist/extension.js",
     "watch": "npm run -S esbuild-base -- --sourcemap --sources-content=false --watch",
     "esbuild-web": "esbuild ./src/web-extension.ts --bundle --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=browser --outfile=dist/web-extension.js",
+    "esbuild-view": "esbuild ./src/webview/trace.ts --bundle --tsconfig=./src/webview/tsconfig.json --format=iife --platform=browser --outfile=dist/trace.js",
     "watch-web": "npm run -S esbuild-web -- --sourcemap --sources-content=false --watch",
-    "build": "npm run -S esbuild-base -- --sourcemap --sources-content=false && npm run -S esbuild-web -- --sourcemap --sources-content=false",
+    "build": "npm run -S esbuild-base -- --sourcemap --sources-content=false && npm run -S esbuild-web -- --sourcemap --sources-content=false && npm run -S esbuild-view -- --sourcemap --sources-content=false",
     "sync-version": "node -e \"const fs=require('fs'),v=/^mod_version=(.+)$/m.exec(fs.readFileSync('../gradle.properties','utf8'))[1].trim(),p='package.json';fs.writeFileSync(p,fs.readFileSync(p,'utf8').replace(/^  \\\"version\\\": \\\".*\\\",$/m,'  \\\"version\\\": \\\"'+v+'\\\",'))\"",
     "package": "vsce package",
     "publish": "vsce publish",
     "publish-pre-release": "vsce publish --pre-release",
-    "vscode:prepublish": "npm run sync-version && rimraf dist && npm run -S esbuild-base -- --minify && npm run -S esbuild-web -- --minify",
-    "test": "npm run typecheck"
+    "vscode:prepublish": "npm run sync-version && rimraf dist && npm run -S esbuild-base -- --minify && npm run -S esbuild-web -- --minify && npm run -S esbuild-view -- --minify",
+    "test": "npm run typecheck && npm run -S test-graph",
+    "test-graph": "esbuild ./src/traceGraph.test.ts --bundle --tsconfig=./tsconfig.json --format=cjs --platform=node --outfile=dist/traceGraph.test.cjs && node dist/traceGraph.test.cjs"
   },
   "devDependencies": {
+    "@types/cytoscape": "^3.21.9",
     "@types/glob": "^7.2.0",
     "@types/mocha": "^9.1.0",
     "@types/node": "^14.14.37",
@@ -52,6 +55,9 @@
     "@vscode/debugadapter-testsupport": "^1.56.0",
     "await-notify": "^1.0.1",
     "base64-js": "^1.5.1",
+    "cytoscape": "^3.34.2",
+    "cytoscape-dagre": "^4.0.1",
+    "cytoscape-node-html-label": "^1.2.2",
     "esbuild": "^0.14.29",
     "eslint": "^8.12.0",
     "events": "^3.3.0",
@@ -59,7 +65,7 @@
     "mocha": "^9.2.2",
     "path-browserify": "^1.0.1",
     "rimraf": "^3.0.2",
-    "typescript": "^4.6.3",
+    "typescript": "^5.9.3",
     "url": "^0.11.0",
     "vsce": "^2.7.0"
   },
@@ -68,6 +74,7 @@
   "activationEvents": [
     "onDebug",
     "onCommand:sniffer.configureLaunch",
+    "onCommand:sniffer.trace",
     "workspaceContains:**/pack.mcmeta"
   ],
   "workspaceTrust": {
@@ -79,6 +86,12 @@
         "command": "sniffer.configureLaunch",
         "title": "Configure Debug Configuration",
         "category": "Sniffer"
+      },
+      {
+        "command": "sniffer.trace",
+        "title": "Trace a command",
+        "category": "Sniffer",
+        "icon": "$(list-tree)"
       }
     ],
     "breakpoints": [

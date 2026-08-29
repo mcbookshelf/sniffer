@@ -4,6 +4,12 @@ import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dap.WebSocketOutputStream
 import dev.mcbookshelf.sniffer.dap.WebSocketServer
 import dev.mcbookshelf.sniffer.dap.ConnectionState
+import dev.mcbookshelf.sniffer.gametest.support.SnifferDapServer
+import dev.mcbookshelf.sniffer.features.trace.TraceCallArguments
+import dev.mcbookshelf.sniffer.features.trace.TraceClient
+import dev.mcbookshelf.sniffer.features.trace.TraceEndedArguments
+import dev.mcbookshelf.sniffer.features.trace.TraceReturnArguments
+import dev.mcbookshelf.sniffer.features.trace.TraceStartedArguments
 import jakarta.websocket.ClientEndpointConfig
 import jakarta.websocket.CloseReason
 import jakarta.websocket.Endpoint
@@ -15,7 +21,7 @@ import org.eclipse.lsp4j.debug.ContinuedEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
-import org.eclipse.lsp4j.debug.launch.DSPLauncher
+import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.glassfish.tyrus.client.ClientManager
@@ -66,7 +72,7 @@ abstract class AbstractDapIntegrationGameTest {
         authEnabled: Boolean = false,
         user: String? = null,
         promptTimeoutSeconds: Int = DEFAULT_PROMPT_TIMEOUT_SECONDS,
-    ): IDebugProtocolServer {
+    ): SnifferDapServer {
         // A previous client that was never closed would go on draining the message queue from under this one.
         closeDapClient()
 
@@ -107,8 +113,10 @@ abstract class AbstractDapIntegrationGameTest {
         )
         this.session = session
 
-        val launcher = DSPLauncher.createClientLauncher(
+        // Not DSPLauncher, which pins the remote interface to the standard one: the mod serves more than that.
+        val launcher = DebugLauncher.createLauncher(
             events,
+            SnifferDapServer::class.java,
             input,
             WebSocketOutputStream(session),
         )
@@ -174,12 +182,16 @@ abstract class AbstractDapIntegrationGameTest {
     }
 
     /** Holds on to the events the adapter pushes, which arrive whenever it decides rather than when they are wanted. */
-    class RecordingDapClient : IDebugProtocolClient {
+    class RecordingDapClient : IDebugProtocolClient, TraceClient {
         val initialized: Queue<Unit> = ConcurrentLinkedQueue()
         val stopped: Queue<StoppedEventArguments> = ConcurrentLinkedQueue()
         val continued: Queue<ContinuedEventArguments> = ConcurrentLinkedQueue()
         val terminated: Queue<TerminatedEventArguments> = ConcurrentLinkedQueue()
         val output: Queue<OutputEventArguments> = ConcurrentLinkedQueue()
+        val traceStarted: Queue<TraceStartedArguments> = ConcurrentLinkedQueue()
+        val traceCall: Queue<TraceCallArguments> = ConcurrentLinkedQueue()
+        val traceReturn: Queue<TraceReturnArguments> = ConcurrentLinkedQueue()
+        val traceEnded: Queue<TraceEndedArguments> = ConcurrentLinkedQueue()
 
         override fun initialized() {
             initialized.add(Unit)
@@ -201,12 +213,32 @@ abstract class AbstractDapIntegrationGameTest {
             output.add(args)
         }
 
+        override fun traceStarted(args: TraceStartedArguments) {
+            traceStarted.add(args)
+        }
+
+        override fun traceCall(args: TraceCallArguments) {
+            traceCall.add(args)
+        }
+
+        override fun traceReturn(args: TraceReturnArguments) {
+            traceReturn.add(args)
+        }
+
+        override fun traceEnded(args: TraceEndedArguments) {
+            traceEnded.add(args)
+        }
+
         fun clear() {
             initialized.clear()
             stopped.clear()
             continued.clear()
             terminated.clear()
             output.clear()
+            traceStarted.clear()
+            traceCall.clear()
+            traceReturn.clear()
+            traceEnded.clear()
         }
     }
 }
