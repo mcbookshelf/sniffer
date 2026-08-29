@@ -20,7 +20,7 @@ import dev.mcbookshelf.sniffer.features.stepping.*
 import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesInput
 import dev.mcbookshelf.sniffer.features.variables.ResolveVariablesOutput
 import dev.mcbookshelf.sniffer.features.variables.VariableNode
-import dev.mcbookshelf.sniffer.util.Extension.addSnifferPrefix
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 import org.eclipse.lsp4j.debug.*
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
@@ -41,8 +41,8 @@ class DapServer : IDebugProtocolServer, DapService {
     companion object {
         private val LOGGER = LoggerFactory.getLogger("sniffer")
 
-        private const val ATTACHED_MESSAGE = "Attached to VSCode!"
-        private const val DISCONNECTED_MESSAGE = "Disconnected from VSCode."
+        private const val ATTACHED_MESSAGE = "sniffer.dap.attached"
+        private const val DISCONNECTED_MESSAGE = "sniffer.dap.disconnected"
         private const val BREAKPOINT_DESCRIPTION = "Breakpoint reached"
         private const val MAIN_THREAD_NAME = "Main Thread"
 
@@ -397,11 +397,9 @@ class DapServer : IDebugProtocolServer, DapService {
         }
     }
 
-    private fun sendMessageToAllPlayers(message: String) {
+    private fun sendMessageToAllPlayers(key: String) {
         try {
-            ServerReference.get().playerList.players.forEach { player ->
-                player.sendSystemMessage(addSnifferPrefix(message))
-            }
+            SnifferChat.broadcast(ServerReference.get(), key)
         } catch (e: Exception) {
             LOGGER.warn("Error sending message to players", e)
         }

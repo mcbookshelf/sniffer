@@ -26,6 +26,7 @@ import net.minecraft.network.chat.Component
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import dev.mcbookshelf.sniffer.command.SnifferCommand
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * The `/breakpoint` command tree.
@@ -69,7 +70,7 @@ object BreakPointCommand : SnifferCommand {
             .then(
                 Commands.literal("continue")
                     .executes {
-                        it.source.sendSuccess({ Component.translatable("sniffer.commands.breakpoint.move") }, false)
+                        SnifferChat.reply(it.source, "sniffer.commands.breakpoint.move")
                         dispatch(ContinueInput, it.source)
                         1
                     }
@@ -77,7 +78,7 @@ object BreakPointCommand : SnifferCommand {
             .then(
                 Commands.literal("pause")
                     .executes {
-                        it.source.sendSuccess({ Component.translatable("sniffer.commands.breakpoint.pause") }, false)
+                        SnifferChat.reply(it.source, "sniffer.commands.breakpoint.pause")
                         dispatch(PauseInput, it.source)
                         1
                     }
@@ -92,11 +93,11 @@ object BreakPointCommand : SnifferCommand {
                                 val output = dispatch(GetVariableInput(key), context.source) as VariableOutput
                                 when {
                                     output.error != null ->
-                                        context.source.sendFailure(Component.translatable("sniffer.commands.breakpoint.get.fail.error", output.error))
+                                        SnifferChat.fail(context.source, "sniffer.commands.breakpoint.get.fail.error", output.error)
                                     output.value != null && output.isMacro ->
-                                        context.source.sendSuccess({ Component.translatable("sniffer.commands.breakpoint.get", key, NbtUtils.toPrettyComponent(output.value)) }, false)
+                                        SnifferChat.reply(context.source, "sniffer.commands.breakpoint.get", key, NbtUtils.toPrettyComponent(output.value))
                                     output.value != null ->
-                                        context.source.sendFailure(Component.translatable("sniffer.commands.breakpoint.get.fail.not_macro"))
+                                        SnifferChat.fail(context.source, "sniffer.commands.breakpoint.get.fail.not_macro")
                                 }
                                 1
                             }
@@ -105,11 +106,11 @@ object BreakPointCommand : SnifferCommand {
                         val output = dispatch(GetAllVariablesInput, context.source) as AllVariablesOutput
                         when {
                             output.error != null ->
-                                context.source.sendFailure(Component.translatable("sniffer.commands.breakpoint.get.fail.error", output.error))
+                                SnifferChat.fail(context.source, "sniffer.commands.breakpoint.get.fail.error", output.error)
                             output.value == null ->
-                                context.source.sendFailure(Component.translatable("sniffer.commands.breakpoint.get.fail.not_macro"))
+                                SnifferChat.fail(context.source, "sniffer.commands.breakpoint.get.fail.not_macro")
                             else ->
-                                context.source.sendSuccess({ NbtUtils.toPrettyComponent(output.value) }, false)
+                                SnifferChat.reply(context.source, NbtUtils.toPrettyComponent(output.value))
                         }
                         1
                     }
@@ -118,7 +119,7 @@ object BreakPointCommand : SnifferCommand {
                 Commands.literal("stack")
                     .executes {
                         val output = dispatch(GetStackInput, it.source) as StackOutput
-                        it.source.sendSuccess({ output.stack }, false)
+                        SnifferChat.reply(it.source, output.stack)
                         1
                     }
             )
@@ -138,7 +139,7 @@ object BreakPointCommand : SnifferCommand {
     internal fun triggerBreakpoint(source: CommandSourceStack): Int {
         dispatch(TriggerBreakpointInput, source)
         for (player in source.server.playerList.players) {
-            player.sendSystemMessage(Component.translatable("sniffer.commands.breakpoint.set"))
+            SnifferChat.tell(player, "sniffer.commands.breakpoint.set")
         }
         return 1
     }

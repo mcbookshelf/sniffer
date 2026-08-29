@@ -24,7 +24,7 @@ class LogCommandIntegrationGameTest {
 
         session.run("log a debug line")
 
-        assertEquals(chat(), listOf("a debug line"), "chat after logging plain text")
+        assertEquals(chat(), listOf("[Sniffer] a debug line"), "chat after logging plain text")
         helper.succeed()
     }
 
@@ -35,7 +35,7 @@ class LogCommandIntegrationGameTest {
 
         session.run("log total={1 + 1}")
 
-        assertEquals(chat(), listOf("total=2"), "chat after logging an expression")
+        assertEquals(chat(), listOf("[Sniffer] total=2"), "chat after logging an expression")
         helper.succeed()
     }
 

@@ -4,7 +4,6 @@ import com.mojang.logging.LogUtils
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryWatcher
 import kotlinx.io.IOException
-import net.minecraft.network.chat.Component
 import net.minecraft.server.MinecraftServer
 import java.nio.file.Files
 import java.nio.file.Path
@@ -12,6 +11,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.extension
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * Owns the filesystem watchers, one per datapack, that report `.mcfunction` changes to the hot reload.
@@ -58,9 +58,11 @@ object WatcherManager {
             val failure = throwable?.takeUnless { it is CancellationException } ?: return@whenComplete
             LOGGER.error("Watcher stopped: {}", id, failure)
             server.execute {
-                server.playerList.broadcastSystemMessage(
-                    Component.literal("[watch:$id] watcher stopped: ${failure.message ?: failure.javaClass.simpleName}"),
-                    false
+                SnifferChat.broadcast(
+                    server,
+                    "sniffer.commands.watcher.stopped.unexpectedly",
+                    id,
+                    failure.message ?: failure.javaClass.simpleName
                 )
             }
         }

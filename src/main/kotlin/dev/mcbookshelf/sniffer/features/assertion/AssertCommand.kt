@@ -20,6 +20,7 @@ import dev.mcbookshelf.sniffer.expression.ExprArgumentType
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import dev.mcbookshelf.sniffer.command.SnifferCommand
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * The `/assert` command, which evaluates an expression and reports the call stack when it does not hold.
@@ -46,12 +47,12 @@ object AssertCommand : SnifferCommand {
                 .executes { ctx ->
                     val failure = failureOf(ctx)
                     if (failure == null) {
-                        ctx.source.sendSuccess({ Component.translatable("sniffer.commands.assert.passed") }, false)
+                        SnifferChat.reply(ctx.source, "sniffer.commands.assert.passed")
                         return@executes 1
                     }
                     // Broadcast as well as thrown: a command that fails inside a function reports nowhere a player would look.
-                    ctx.source.server.playerList.broadcastSystemMessage(failure, false)
-                    throw ASSERT_FAILED.create(failure)
+                    SnifferChat.broadcast(ctx.source.server, failure)
+                    throw ASSERT_FAILED.create(SnifferChat.prefixed(failure))
                 }
             )
 

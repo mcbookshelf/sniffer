@@ -62,5 +62,10 @@
   "sniffer.commands.debugmode.disable": "Debug mode is now disabled",
   "sniffer.commands.debugmode.enable": "Debug mode is now enabled",
   "sniffer.name": "Sniffer",
-  "sniffer.step": "Step Into"
+  "sniffer.step": "Step Into",
+  "sniffer.commands.watcher.stopped.unexpectedly": "Watcher on %s stopped: %s",
+  "sniffer.dap.attached": "Attached to the editor",
+  "sniffer.dap.disconnected": "Disconnected from the editor",
+  "sniffer.dap.listening": "Debugger listening on port %s",
+  "sniffer.dap.listening.copy": "Click to copy"
 }

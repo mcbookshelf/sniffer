@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import dev.mcbookshelf.sniffer.command.SnifferCommand
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * The `/watch` command, which hot reloads datapack functions.
@@ -85,19 +86,19 @@ object WatchCommand : SnifferCommand {
                         val bool = BoolArgumentType.getBool(it, "bool")
                         isAutoReload = bool
                         if(isAutoReload){
-                            it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto.enable")}, false)
+                            SnifferChat.reply(it.source, "sniffer.commands.watcher.auto.enable")
                         }else{
-                            it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto.disable")}, false)
+                            SnifferChat.reply(it.source, "sniffer.commands.watcher.auto.disable")
                         }
                         return@executes 1
                     }
                 ).executes {
-                    it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.auto", isAutoReload) }, false)
+                    SnifferChat.reply(it.source, "sniffer.commands.watcher.auto", isAutoReload)
                     return@executes 1
                 }
             ).then(literal<CommandSourceStack>("reload")
                 .executes {
-                    it.source.sendSuccess({ Component.translatable("sniffer.commands.watcher.hot_reload")}, false)
+                    SnifferChat.reply(it.source, "sniffer.commands.watcher.hot_reload")
                     hotReload(it.source.server)
                     return@executes 1
                 }
@@ -108,7 +109,7 @@ object WatchCommand : SnifferCommand {
             val datapackPath = server.getWorldPath(LevelResource.DATAPACK_DIR)
             val packPath = datapackPath.resolve(id)
             if(Files.notExists(packPath)){
-                src.sendFailure(Component.translatable("sniffer.commands.watcher.failed.datapack_not_found", id))
+                SnifferChat.fail(src, "sniffer.commands.watcher.failed.datapack_not_found", id)
                 return 0
             }
             val functionsRoot = packPath.resolve("data")
@@ -121,14 +122,14 @@ object WatchCommand : SnifferCommand {
                 }
             }
             if(ok){
-                src.sendSuccess({ Component.translatable("sniffer.commands.watcher.start", id) }, false)
+                SnifferChat.reply(src, "sniffer.commands.watcher.start", id)
                 return 1
             }else{
-                src.sendFailure(Component.translatable("sniffer.commands.watcher.start.failed", id))
+                SnifferChat.fail(src, "sniffer.commands.watcher.start.failed", id)
                 return 0
             }
         }catch (ex: Exception){
-            src.sendFailure(Component.translatable("sniffer.commands.watcher.start.failed", id))
+            SnifferChat.fail(src, "sniffer.commands.watcher.start.failed", id)
             LOGGER.error("Failed to start watching: $id", ex)
             return 0
         }
@@ -138,14 +139,14 @@ object WatchCommand : SnifferCommand {
         try{
             val ok = WatcherManager.stop(id)
             if(ok){
-                src.sendSuccess({ Component.translatable("sniffer.commands.watcher.stop", id) }, false)
+                SnifferChat.reply(src, "sniffer.commands.watcher.stop", id)
                 return 1
             }else{
-                src.sendFailure(Component.translatable("sniffer.commands.watcher.stop.failed", id))
+                SnifferChat.fail(src, "sniffer.commands.watcher.stop.failed", id)
                 return 0
             }
         }catch (ex: Exception){
-            src.sendFailure(Component.translatable("sniffer.commands.watcher.stop.failed", id))
+            SnifferChat.fail(src, "sniffer.commands.watcher.stop.failed", id)
             LOGGER.error("Failed to stop watching: $id", ex)
             return 0
         }
@@ -226,10 +227,10 @@ object WatchCommand : SnifferCommand {
                 if (ex != null) {
                     LOGGER.error("Failed to hot reload functions", ex)
                     server.execute {
-                        server.playerList.broadcastSystemMessage(
+                        SnifferChat.broadcast(
+                            server,
                             Component.translatable("sniffer.commands.watcher.modify.failed.ex", ex.message ?: "unknown")
-                                .withColor(CommonColors.RED),
-                            false
+                                .withColor(CommonColors.RED)
                         )
                     }
                     return@whenComplete
@@ -287,10 +288,10 @@ object WatchCommand : SnifferCommand {
             LOGGER.error("Failed to parse function: $identifier", ex)
             if (announceFailure) {
                 server.execute {
-                    server.playerList.broadcastSystemMessage(
+                    SnifferChat.broadcast(
+                        server,
                         Component.translatable("sniffer.commands.watcher.create.failed", identifier)
-                            .withColor(CommonColors.RED),
-                        false
+                            .withColor(CommonColors.RED)
                     )
                 }
             }
@@ -299,9 +300,9 @@ object WatchCommand : SnifferCommand {
     }
 
     private fun announce(server: MinecraftServer, text: String, color: String) {
-        server.playerList.broadcastSystemMessage(
-            Component.literal(text).withColor(TextColor.parseColor(color).getOrThrow().value),
-            false
+        SnifferChat.broadcast(
+            server,
+            Component.literal(text).withColor(TextColor.parseColor(color).getOrThrow().value)
         )
     }
 

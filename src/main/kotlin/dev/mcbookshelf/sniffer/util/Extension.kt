@@ -2,7 +2,6 @@ package dev.mcbookshelf.sniffer.util
 
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.exceptions.CommandSyntaxException
-import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 
@@ -60,16 +59,6 @@ object Extension {
     fun StringReader.test(expected: String): Boolean{
         return this.canRead(expected.length) && this.string.substring(this.cursor, this.cursor + expected.length) == expected
     }
-
-    private const val MESSAGE_PREFIX = "[Sniffer] "
-
-    @JvmStatic
-    fun addSnifferPrefix(text: Component): Component =
-        Component.literal(MESSAGE_PREFIX).withStyle(ChatFormatting.AQUA).append(text)
-
-    @JvmStatic
-    fun addSnifferPrefix(text: String): Component =
-        addSnifferPrefix(Component.literal(text).withStyle(ChatFormatting.WHITE))
 
     @JvmStatic
     fun StringReader.expect(expected: String){

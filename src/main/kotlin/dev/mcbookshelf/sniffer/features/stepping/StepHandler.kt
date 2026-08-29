@@ -6,7 +6,7 @@ import dev.mcbookshelf.sniffer.dispatch.Context
 import dev.mcbookshelf.sniffer.dispatch.Handler
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.StepInput
-import net.minecraft.network.chat.Component
+import dev.mcbookshelf.sniffer.chat.SnifferChat
 
 /**
  * Base handler of the three step actions.
@@ -24,7 +24,7 @@ abstract class StepHandler<I : StepInput>(
 
     override fun handle(input: I, ctx: Context): Output {
         if (!SteppingState.isDebugging) {
-            ctx.source.sendFailure(Component.translatable("sniffer.commands.breakpoint.step.fail"))
+            SnifferChat.fail(ctx.source, "sniffer.commands.breakpoint.step.fail")
             return Ack
         }
 
