@@ -1,16 +1,17 @@
 package dev.mcbookshelf.sniffer.features.breakpoints
 
 import dev.mcbookshelf.sniffer.dispatch.IInput
+import dev.mcbookshelf.sniffer.features.source.Line
 
 /**
  * A single requested breakpoint.
  *
- * @property line zero indexed line to put the breakpoint on
+ * @property line the line to put the breakpoint on
  * @property condition condition command, `null` when unconditional.
  *   The breakpoint only pauses when that command reports success.
  * @author theogiraudet
  */
-data class BreakpointSpec(val line: Int, val condition: String? = null)
+data class BreakpointSpec(val line: Line, val condition: String? = null)
 
 /**
  * Sets the breakpoints of a file, replacing the ones it already had.

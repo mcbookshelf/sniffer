@@ -4,6 +4,8 @@ import net.minecraft.commands.CommandSourceStack
 import org.slf4j.LoggerFactory
 import dev.mcbookshelf.sniffer.dap.DebugEventBus
 import dev.mcbookshelf.sniffer.features.callstack.ScopeManager
+import dev.mcbookshelf.sniffer.features.source.Line
+import kotlin.jvm.optionals.getOrNull
 import dev.mcbookshelf.sniffer.features.stepping.SteppingState
 
 /**
@@ -32,7 +34,7 @@ object BreakpointTrigger {
         try {
             val scope = ScopeManager.get().currentScope
             val fn = scope.map { it.function }.orElse("")
-            val line = scope.map { it.line }.orElse(-1)
+            val line = scope.getOrNull()?.line
             // A pause lands wherever execution happened to be, so no breakpoint was hit even if one sits on that line.
             val bpId = if (reason == PAUSE_REASON) -1 else BreakpointManager.getBreakpointId(fn, line).orElse(-1)
             DebugEventBus.fireStop(bpId, reason)

@@ -2,6 +2,7 @@ package dev.mcbookshelf.sniffer.features.callstack
 
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.features.source.FunctionIdentity
+import dev.mcbookshelf.sniffer.features.source.Line
 
 /**
  * Result of a paginated stack trace query.
@@ -20,11 +21,11 @@ data class StackTraceOutput(
  *
  * @property id id of the scope the frame stands for
  * @property identity the function this frame runs, located as well as named
- * @property line zero indexed line inside that function
+ * @property line the line reached inside that function, `null` when it ran none
  * @author theogiraudet
  */
 data class StackFrameData(
     val id: Int,
     val identity: FunctionIdentity,
-    val line: Int,
+    val line: Line?,
 )

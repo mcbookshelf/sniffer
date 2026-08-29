@@ -104,7 +104,7 @@ public class UnboundDebugMixin implements UnboundUniqueAccessor {
             stopReason = BreakpointTrigger.STEP_REASON;
         }
 
-        ScopeManager.Companion.get().getCurrentScope().ifPresent(scope -> scope.setLine(sourceLine));
+        ScopeManager.Companion.get().getCurrentScope().ifPresent(scope -> scope.recordLine(sourceLine));
 
         if (stopReason != null && sender instanceof CommandSourceStack css) {
             // Drop memoized variable subtrees so the client sees fresh entity state on the upcoming pause.

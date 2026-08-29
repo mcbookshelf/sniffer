@@ -5,6 +5,7 @@ import dev.mcbookshelf.sniffer.dispatch.IInput
 import dev.mcbookshelf.sniffer.dispatch.Output
 import dev.mcbookshelf.sniffer.dispatch.SnifferDispatcher
 import dev.mcbookshelf.sniffer.features.source.FunctionIdentity
+import dev.mcbookshelf.sniffer.features.source.Line
 import dev.mcbookshelf.sniffer.features.source.RealPath
 import dev.mcbookshelf.sniffer.features.stepping.SteppingState
 import dev.mcbookshelf.sniffer.features.variables.VariableNode
@@ -142,14 +143,14 @@ class DapServer : IDebugProtocolServer {
             return CompletableFuture.completedFuture(SetBreakpointsResponse())
         }
 
-        val specs = args.breakpoints.map { BreakpointSpec(it.line - 1, it.condition) }
+        val specs = args.breakpoints.map { BreakpointSpec(Line.inEditor(it.line), it.condition) }
 
         return onServerThread {
             val output = dispatch(SetBreakpointsInput(args.source.path, specs)) as SetBreakpointsOutput
 
             val dapBreakpoints = output.results.map { result ->
                 Breakpoint().apply {
-                    line = result.line + 1
+                    line = result.line.inEditor
                     isVerified = result.verified
                     if (result.message != null) {
                         message = result.message
@@ -236,7 +237,7 @@ class DapServer : IDebugProtocolServer {
                 StackFrame().apply {
                     id = data.id
                     name = data.identity.minecraftPath
-                    line = data.line + 1
+                    line = data.line?.inEditor ?: 0
                     source = toSource(data.identity)
                 }
             }

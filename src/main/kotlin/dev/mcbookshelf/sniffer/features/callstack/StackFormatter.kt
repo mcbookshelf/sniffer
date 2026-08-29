@@ -47,7 +47,7 @@ object StackFormatter {
                 text.append(Component.literal("... (${stacks.size - count} more)").withColor(color))
                 break
             }
-            val lineStr = if (stack.line >= 0) ":${stack.line + 1}" else ""
+            val lineStr = stack.line?.let { ":${it.inEditor}" } ?: ""
             val t = Component.literal("${stack.function}$lineStr")
             val isTop = stacks.indexOf(stack) == 0
             t.style = t.style
