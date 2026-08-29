@@ -10,7 +10,9 @@ import dev.mcbookshelf.sniffer.features.callstack.GetScopesHandler
 import dev.mcbookshelf.sniffer.features.callstack.GetStackHandler
 import dev.mcbookshelf.sniffer.features.callstack.GetStackTraceHandler
 import dev.mcbookshelf.sniffer.features.debugmode.SetDebugModeHandler
+import dev.mcbookshelf.sniffer.features.evaluate.CompleteCommandHandler
 import dev.mcbookshelf.sniffer.features.evaluate.EvaluateHandler
+import dev.mcbookshelf.sniffer.features.evaluate.RunCommandHandler
 import dev.mcbookshelf.sniffer.features.source.GetSourceHandler
 import dev.mcbookshelf.sniffer.features.stepping.ContinueHandler
 import dev.mcbookshelf.sniffer.features.stepping.PauseHandler
@@ -51,6 +53,8 @@ fun buildHandlers(): List<Handler<*>> {
         ClearScopesHandler(scopeManager),
         ResolveVariablesHandler(scopeManager),
         EvaluateHandler(scopeManager, evaluationSession),
+        RunCommandHandler(scopeManager),
+        CompleteCommandHandler(scopeManager),
         GetSourceHandler(),
         TraceHandler { DapClient.of(TraceClient::class.java) },
     )

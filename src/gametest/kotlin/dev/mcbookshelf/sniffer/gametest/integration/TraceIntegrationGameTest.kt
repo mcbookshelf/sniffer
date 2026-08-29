@@ -1,12 +1,12 @@
 package dev.mcbookshelf.sniffer.gametest.integration
 
 import dev.mcbookshelf.sniffer.dap.ConnectionState
-import dev.mcbookshelf.sniffer.features.trace.TraceArguments
 import dev.mcbookshelf.sniffer.features.trace.TraceEndReason
 import dev.mcbookshelf.sniffer.gametest.support.*
 import net.fabricmc.fabric.api.gametest.v1.GameTest
 import net.minecraft.gametest.framework.GameTestHelper
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 
 /**
  * `/trace`, whose graph only ever reaches an attached editor.
@@ -106,8 +106,8 @@ class TraceIntegrationGameTest : AbstractDapIntegrationGameTest() {
             // Halts inside the traced function, so the first trace is still open when the second is asked for.
             .thenExecute { session.run("trace run function $TRIGGERS") }
             .thenAwaitEvent("stopped", events.stopped)
-            .thenRequest("snifferTrace", { dap.snifferTrace(TraceArguments("function $LINEAR")) }) { response ->
-                assertTrue(response.traceId == null, "A refused trace must not report an id")
+            .thenRequest("evaluate", { dap.evaluate(evaluateOf("/trace run function $LINEAR", REPL)) }) { response ->
+                assertTrue(response.result.isNotEmpty(), "The console should be told why the trace was refused")
             }
             .thenExecute {
                 assertEquals(events.traceStarted.size, 1, "traces opened")
@@ -121,7 +121,7 @@ class TraceIntegrationGameTest : AbstractDapIntegrationGameTest() {
     fun aTraceLeftOpenByADisconnectDoesNotRefuseTheNextOne(helper: GameTestHelper) {
         val session = DebugSession(helper)
         val dap = initDapClient()
-        var reconnected: SnifferDapServer? = null
+        var reconnected: IDebugProtocolServer? = null
 
         helper.startSequence()
             .thenAwaitDapReady(dap)

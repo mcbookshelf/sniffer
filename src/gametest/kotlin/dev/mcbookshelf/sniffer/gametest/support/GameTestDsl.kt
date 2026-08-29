@@ -17,6 +17,7 @@ import net.minecraft.server.players.NameAndId
 import net.minecraft.server.level.ServerPlayer
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.ScopesArguments
+import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.Variable
 import org.eclipse.lsp4j.debug.VariablesArguments
@@ -54,6 +55,18 @@ fun <T> GameTestSequence.thenRequest(
 }
 
 /** Waits for the next [queue] event and hands it to [check]. */
+/** The value the protocol gives `EvaluateArguments.context` for the debug console. */
+const val REPL = "repl"
+
+/**
+ * An evaluation as the editor sends it.
+ * The context is what says which part of the editor is asking, and only the console may run a command.
+ */
+fun evaluateOf(expression: String, context: String? = null) = EvaluateArguments().apply {
+    this.expression = expression
+    this.context = context
+}
+
 fun <T> GameTestSequence.thenAwaitEvent(
     label: String,
     queue: Queue<T>,

@@ -1,19 +1,7 @@
 package dev.mcbookshelf.sniffer.gametest.integration
 
-import dev.mcbookshelf.sniffer.gametest.support.DebugSession
-import dev.mcbookshelf.sniffer.gametest.support.assertEquals
-import dev.mcbookshelf.sniffer.gametest.support.fail
-import dev.mcbookshelf.sniffer.gametest.support.thenExpand
-import dev.mcbookshelf.sniffer.gametest.support.thenPausedVariables
-import dev.mcbookshelf.sniffer.gametest.support.variablesOf
-import dev.mcbookshelf.sniffer.gametest.support.assertFalse
-import dev.mcbookshelf.sniffer.gametest.support.assertThat
-import dev.mcbookshelf.sniffer.gametest.support.assertTrue
-import dev.mcbookshelf.sniffer.gametest.support.thenAwaitDapReady
-import dev.mcbookshelf.sniffer.gametest.support.thenAwaitEvent
-import dev.mcbookshelf.sniffer.gametest.support.thenRequest
 import dev.mcbookshelf.sniffer.features.source.FunctionPathRegistry
-import java.nio.file.Files
+import dev.mcbookshelf.sniffer.gametest.support.*
 import net.fabricmc.fabric.api.gametest.v1.GameTest
 import net.minecraft.core.BlockPos
 import net.minecraft.gametest.framework.GameTestHelper
@@ -24,24 +12,11 @@ import net.minecraft.server.MinecraftServer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityTypes
 import net.minecraft.world.level.storage.LevelResource
-import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
-import org.eclipse.lsp4j.debug.ContinueArguments
-import org.eclipse.lsp4j.debug.DisconnectArguments
-import org.eclipse.lsp4j.debug.EvaluateArguments
-import org.eclipse.lsp4j.debug.InitializeRequestArguments
-import org.eclipse.lsp4j.debug.NextArguments
-import org.eclipse.lsp4j.debug.PauseArguments
-import org.eclipse.lsp4j.debug.ScopesArguments
-import org.eclipse.lsp4j.debug.SetBreakpointsArguments
-import org.eclipse.lsp4j.debug.Source
-import org.eclipse.lsp4j.debug.SourceArguments
-import org.eclipse.lsp4j.debug.SourceBreakpoint
-import org.eclipse.lsp4j.debug.StackTraceArguments
-import org.eclipse.lsp4j.debug.StepInArguments
-import org.eclipse.lsp4j.debug.StepOutArguments
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.Configurator
+import org.eclipse.lsp4j.debug.*
 import org.slf4j.LoggerFactory
+import java.nio.file.Files
 
 /**
  * The Debug Adapter Protocol as an editor speaks it to the mod, over a real WebSocket.
@@ -645,15 +620,19 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
     }
 
     @GameTest(environment = "sniffer_test:dap_evaluate_no_scope", maxTicks = MAX_TICKS)
-    fun evaluatingWithNothingPausedReportsTheMissingScope(helper: GameTestHelper) {
+    fun anExpressionResolvesAgainstTheAttachedPlayerWhenNothingIsPaused(helper: GameTestHelper) {
         DebugSession(helper)
-        val dap = initDapClient()
+        val (player, _) = placePlayer(helper, "sniffer_watch", op = true)
+        val dap = initDapClient(user = player.name.string)
 
         helper.startSequence()
-            // An expression is resolved against the executor of the paused scope, so with nothing paused there is nothing to resolve it against.
+            .thenAwaitDapReady(dap)
+            // With nothing paused there is no scope to resolve against, so the expression reads the same source
+            // a command would run as: the player the session named.
             .thenRequest("evaluate", { dap.evaluate(evaluateOf("name @s")) }) { response ->
-                assertEquals(response.result, "Scope is null", "evaluated value")
-                assertEquals(response.variablesReference, 0, "An unevaluated expression is not expandable")
+                // `name` answers a Component, which the result carries in its debug form, name included.
+                assertTrue(response.result.contains(player.name.string), "evaluated value")
+                assertEquals(response.variablesReference, 0, "A scalar result is not expandable")
             }
             .thenSucceedAndClose()
     }
@@ -691,6 +670,142 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
                 assertTrue(response.result.isNotEmpty(), "The failure should be reported as the value")
                 assertEquals(response.variablesReference, 0, "A failed evaluation is not expandable")
             }
+            .thenSucceedAndClose()
+    }
+
+
+    @GameTest(environment = "sniffer_test:dap_repl_command", maxTicks = MAX_TICKS)
+    fun aCommandTypedInTheConsoleRunsAgainstThePausedScope(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val dap = initDapClient()
+        session.breakpointAt(LINEAR, line = 1)
+
+        helper.startSequence()
+            .thenAwaitDapReady(dap)
+            .thenExecute { session.run("function $LINEAR") }
+            .thenAwaitEvent("stopped", events.stopped)
+            .thenRequest(
+                "evaluate",
+                { dap.evaluate(evaluateOf("/data modify storage sniffer_test:log repl set value 7", REPL)) },
+            ) { response ->
+                // Whatever the command wrote back is what the console shows, so it cannot be silent.
+                assertTrue(response.result.isNotEmpty(), "The console should be told what the command answered")
+            }
+            .thenExecute {
+                // The command ran for real, and while the debugged function is still suspended on its first line.
+                assertEquals(session.stored("repl"), 7, "value written by the console")
+                assertTrue(session.isPaused, "Running a command must not resume the execution")
+                // The console wrote into the same log, so `repl` sits beside the markers; `b` and `c` missing is
+                // what says the function is still suspended on its first line.
+                assertThat(session).hasExecuted("a", "repl")
+            }
+            .thenSucceedAndClose()
+    }
+
+    @GameTest(environment = "sniffer_test:dap_repl_command_only", maxTicks = MAX_TICKS)
+    fun aCommandIsRunOnlyWhenTheConsoleAsksForIt(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val dap = initDapClient()
+        session.breakpointAt(LINEAR, line = 1)
+
+        helper.startSequence()
+            .thenAwaitDapReady(dap)
+            .thenExecute { session.run("function $LINEAR") }
+            .thenAwaitEvent("stopped", events.stopped)
+            // The editor evaluates the watch box on its own, on every step, so a command there would run itself.
+            .thenRequest(
+                "evaluate",
+                { dap.evaluate(evaluateOf("/data modify storage sniffer_test:log watched set value 7", "watch")) },
+            ) { response ->
+                assertTrue(response.variablesReference == 0, "A refused command is not expandable")
+            }
+            .thenExecute { assertEquals(session.stored("watched"), null, "value written from the watch box") }
+            .thenSucceedAndClose()
+    }
+
+    @GameTest(environment = "sniffer_test:dap_completions", maxTicks = MAX_TICKS)
+    fun theConsoleCompletesACommandWithTheGamesOwnSuggestions(helper: GameTestHelper) {
+        val dap = initDapClient()
+        val typed = "/function sniffer_test:lin"
+
+        helper.startSequence()
+            .thenAwaitDapReady(dap)
+            .thenRequest("completions", { dap.completions(completionsOf(typed)) }) { response ->
+                val targets = response.targets.toList()
+                assertTrue(
+                    targets.any { it.label == LINEAR },
+                    "The game knows this function, so completing its name should offer it",
+                )
+                val linear = targets.first { it.label == LINEAR }
+                // The span covers the argument alone, so the editor replaces what was typed of it rather than
+                // appending to it. Counted from the start of the text the editor sent, slash included, and in
+                // the base it asked in, which is one.
+                assertEquals(linear.start, typed.indexOf("sniffer_test:lin") + 1, "start of the replaced span")
+                assertEquals(linear.length, "sniffer_test:lin".length, "length of the replaced span")
+            }
+            .thenSucceedAndClose()
+    }
+
+
+    @GameTest(environment = "sniffer_test:dap_repl_unpaused", maxTicks = MAX_TICKS)
+    fun aCommandRunsAsTheAttachedPlayerWhenNothingIsPaused(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val (player, _) = placePlayer(helper, "sniffer_repl", op = true)
+        val dap = initDapClient(user = player.name.string)
+
+        helper.startSequence()
+            .thenAwaitDapReady(dap)
+            // Nothing is paused, so there is no scope to borrow an executor from, and `@s` can only be the player the session named.
+            // It matches nothing at all for the server's own source.
+            .thenRequest(
+                "evaluate",
+                {
+                    dap.evaluate(
+                        evaluateOf(
+                            "/execute as @s run data modify storage sniffer_test:log ran set value 7",
+                            REPL,
+                        ),
+                    )
+                },
+            ) { response ->
+                assertTrue(response.result.isNotEmpty(), "The console should be told what the command answered")
+            }
+            .thenExecute { assertEquals(session.stored("ran"), 7, "value written as the attached player") }
+            .thenSucceedAndClose()
+    }
+
+
+    @GameTest(environment = "sniffer_test:dap_repl_braced", maxTicks = MAX_TICKS)
+    fun theConsoleRunsWhatIsNotBracedAndReadsWhatIs(helper: GameTestHelper) {
+        val session = DebugSession(helper)
+        val dap = initDapClient()
+        session.breakpointAt(LINEAR, line = 1)
+
+        helper.startSequence()
+            .thenAwaitDapReady(dap)
+            .thenExecute { session.run("function $LINEAR") }
+            .thenAwaitEvent("stopped", events.stopped)
+            // No slash: a function file writes its commands without one, and the console takes them as written.
+            .thenRequest(
+                "evaluate",
+                { dap.evaluate(evaluateOf("data modify storage sniffer_test:log bare set value 7", REPL)) },
+            ) { _ -> }
+            .thenExecute { assertEquals(session.stored("bare"), 7, "value written by a command with no slash") }
+            // Braced, so it is read rather than run, and read as the whole mini language: operands in
+            // parentheses, operators between them, the way `#!log` and `#!assert` write it.
+            .thenRequest(
+                "evaluate",
+                { dap.evaluate(evaluateOf("{ (data storage sniffer_test:log bare) }", REPL)) },
+            ) { response ->
+                assertEquals(response.result, "7", "evaluated value")
+            }
+            .thenRequest(
+                "evaluate",
+                { dap.evaluate(evaluateOf("{ (data storage sniffer_test:log bare) == 7 }", REPL)) },
+            ) { response ->
+                assertEquals(response.result, "1b", "compared value")
+            }
+            .thenExecute { assertEquals(session.stored("bare"), 7, "an expression must not write anything") }
             .thenSucceedAndClose()
     }
 
@@ -1108,8 +1223,10 @@ class DapProtocolIntegrationGameTest : AbstractDapIntegrationGameTest() {
             .thenSucceedAndClose()
     }
 
-    private fun evaluateOf(expression: String) = EvaluateArguments().apply {
-        this.expression = expression
+    /** Completes at the end of [text], which is where a caret sits while typing. */
+    private fun completionsOf(text: String) = CompletionsArguments().apply {
+        this.text = text
+        this.column = text.length + 1
     }
 
     private fun stackTraceOf(startFrame: Int? = null, levels: Int? = null) = StackTraceArguments().apply {

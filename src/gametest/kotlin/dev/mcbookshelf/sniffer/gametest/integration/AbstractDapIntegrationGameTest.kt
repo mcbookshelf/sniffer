@@ -4,7 +4,6 @@ import dev.mcbookshelf.sniffer.config.DebuggerConfig
 import dev.mcbookshelf.sniffer.dap.WebSocketOutputStream
 import dev.mcbookshelf.sniffer.dap.WebSocketServer
 import dev.mcbookshelf.sniffer.dap.ConnectionState
-import dev.mcbookshelf.sniffer.gametest.support.SnifferDapServer
 import dev.mcbookshelf.sniffer.features.trace.TraceCallArguments
 import dev.mcbookshelf.sniffer.features.trace.TraceClient
 import dev.mcbookshelf.sniffer.features.trace.TraceEndedArguments
@@ -72,7 +71,7 @@ abstract class AbstractDapIntegrationGameTest {
         authEnabled: Boolean = false,
         user: String? = null,
         promptTimeoutSeconds: Int = DEFAULT_PROMPT_TIMEOUT_SECONDS,
-    ): SnifferDapServer {
+    ): IDebugProtocolServer {
         // A previous client that was never closed would go on draining the message queue from under this one.
         closeDapClient()
 
@@ -113,10 +112,11 @@ abstract class AbstractDapIntegrationGameTest {
         )
         this.session = session
 
-        // Not DSPLauncher, which pins the remote interface to the standard one: the mod serves more than that.
+        // The mod also pushes notifications of its own, which [events] answers: they are read off the class of
+        // the local service rather than declared on the remote interface, so the standard one is enough here.
         val launcher = DebugLauncher.createLauncher(
             events,
-            SnifferDapServer::class.java,
+            IDebugProtocolServer::class.java,
             input,
             WebSocketOutputStream(session),
         )

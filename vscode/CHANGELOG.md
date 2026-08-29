@@ -2,13 +2,20 @@
 
 ## 1.0.0
 
-First public release.
+> **🎉 First public release!**
+>
+> *Sniffer becomes a real debugger: VS Code attaches to a running game over the Debug Adapter Protocol.*
 
-- Attach to a running Minecraft game over the Debug Adapter Protocol.
-- Breakpoints in `.mcfunction` files, including conditional ones.
-- Step over, step into, step out and continue.
-- Call stack, and inspection of the executor, the location and the macro arguments of the paused execution.
-- Notification offering to generate the `.vscode/launch.json` when a datapack is opened.
-- Path mapping for datapacks that do not live on the machine running the editor.
-- Trace a command and see the call graph of its execution, drawn as it runs, from *Sniffer: Trace a command*.
-The panel also opens on its own for a trace started in game with `/trace run`.
+(Sniffer is now based on **Minecraft 26.2**.)
+
+- <abbr title="New Features">✨</abbr> Debug Adapter Protocol server, served over WebSocket by the mod, and the VS Code extension that attaches to it.
+- <abbr title="New Features">✨</abbr> Breakpoints in `.mcfunction` files, conditioned by a Minecraft command read on its success channel.
+- <abbr title="New Features">✨</abbr> Stepping over, into and out of function calls, and continuing to the next breakpoint.
+- <abbr title="New Features">✨</abbr> Inspection of the paused execution: call stack, executor, location and macro arguments.
+- <abbr title="New Features">✨</abbr> In game debug commands: `/breakpoint`, `/debugmode`, and the `#!` directives `#!log`, `#!assert`, `#!jvmtimer` and `#!watch`.
+- <abbr title="New Features">✨</abbr> Hot reload of edited functions, spliced into the running game without a datapack reload.
+- <abbr title="New Features">✨</abbr> In game authorization prompt before a debug session starts, and path mapping for remote datapacks.
+- <abbr title="New Features">✨</abbr> Trace a command with `/trace run` and see the call graph of its execution, drawn as it runs.
+  The panel also opens on its own for a trace started in game with `/trace run`.
+- <abbr title="New Features">✨</abbr> Commands and expressions can be executed from VS Code *Debug Console*.
+- <abbr title="Documentation">📝</abbr> User documentation, published on Read the Docs.

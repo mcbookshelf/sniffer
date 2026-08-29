@@ -74,7 +74,6 @@
   "activationEvents": [
     "onDebug",
     "onCommand:sniffer.configureLaunch",
-    "onCommand:sniffer.trace",
     "workspaceContains:**/pack.mcmeta"
   ],
   "workspaceTrust": {
@@ -86,12 +85,6 @@
         "command": "sniffer.configureLaunch",
         "title": "Configure Debug Configuration",
         "category": "Sniffer"
-      },
-      {
-        "command": "sniffer.trace",
-        "title": "Trace a command",
-        "category": "Sniffer",
-        "icon": "$(list-tree)"
       }
     ],
     "breakpoints": [
