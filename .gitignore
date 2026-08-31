@@ -53,3 +53,6 @@ docs/_build/
 
 # Python bytecode from the scripts directory
 __pycache__/
+
+# Left behind at the root when a vanilla server jar is unpacked outside run/
+/META-INF/
