@@ -28,11 +28,11 @@
   "scripts": {
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/webview/tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/trace/webview/tsconfig.json --noEmit",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node --outfile=dist/extension.js",
     "watch": "npm run -S esbuild-base -- --sourcemap --sources-content=false --watch",
     "esbuild-web": "esbuild ./src/web-extension.ts --bundle --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=browser --outfile=dist/web-extension.js",
-    "esbuild-view": "esbuild ./src/webview/trace.ts --bundle --tsconfig=./src/webview/tsconfig.json --format=iife --platform=browser --outfile=dist/trace.js",
+    "esbuild-view": "esbuild ./src/trace/webview/trace.ts --bundle --tsconfig=./src/trace/webview/tsconfig.json --format=iife --platform=browser --outfile=dist/trace.js",
     "watch-web": "npm run -S esbuild-web -- --sourcemap --sources-content=false --watch",
     "build": "npm run -S esbuild-base -- --sourcemap --sources-content=false && npm run -S esbuild-web -- --sourcemap --sources-content=false && npm run -S esbuild-view -- --sourcemap --sources-content=false",
     "sync-version": "node -e \"const fs=require('fs'),v=/^mod_version=(.+)$/m.exec(fs.readFileSync('../gradle.properties','utf8'))[1].trim(),p='package.json';fs.writeFileSync(p,fs.readFileSync(p,'utf8').replace(/^  \\\"version\\\": \\\".*\\\",$/m,'  \\\"version\\\": \\\"'+v+'\\\",'))\"",
@@ -41,7 +41,7 @@
     "publish-pre-release": "vsce publish --pre-release",
     "vscode:prepublish": "npm run sync-version && rimraf dist && npm run -S esbuild-base -- --minify && npm run -S esbuild-web -- --minify && npm run -S esbuild-view -- --minify",
     "test": "npm run typecheck && npm run -S test-graph",
-    "test-graph": "esbuild ./src/traceGraph.test.ts --bundle --tsconfig=./tsconfig.json --format=cjs --platform=node --outfile=dist/traceGraph.test.cjs && node dist/traceGraph.test.cjs"
+    "test-graph": "esbuild ./test/traceGraph.test.ts --bundle --tsconfig=./tsconfig.json --format=cjs --platform=node --outfile=dist/traceGraph.test.cjs && node dist/traceGraph.test.cjs"
   },
   "devDependencies": {
     "@types/cytoscape": "^3.21.9",

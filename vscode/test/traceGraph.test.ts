@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert';
-import { TraceGraph } from './traceGraph';
-import { COMMAND_NODE, type SerializedGraph } from './traceWire';
+import { TraceGraph } from '../src/trace/traceGraph';
+import { COMMAND_NODE, type SerializedGraph } from '../src/trace/traceWire';
 
 const call = (fn: string, callerLine: number | undefined) =>
     ({ traceId: 1, function: fn, executor: 'Server', callerLine, source: { path: `/packs/${fn}.mcfunction` } });

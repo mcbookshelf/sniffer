@@ -1,32 +1,11 @@
-/*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
- *--------------------------------------------------------*/
-/*
- * extension.ts (and activateMockDebug.ts) forms the "plugin" that plugs into VS Code and contains the code that
- * connects VS Code with the debug adapter.
- * 
- * extension.ts contains code for launching the debug adapter in three different ways:
- * - as an external program communicating with VS Code via stdin/stdout,
- * - as a server process communicating with VS Code via sockets or named pipes, or
- * - as inlined code running in the extension itself (default).
- * 
- * Since the code in extension.ts uses node.js APIs it cannot run in the browser.
- */
-
-'use strict';
-
 import * as vscode from 'vscode';
-import { SocketDescriptorFactory } from './SocketDescriptorFactory';
-import { configureLaunch, offerSetup } from './configureLaunch';
-import { TracePanel } from './tracePanel';
+import { activateCommon } from './activate';
+import { SocketDescriptorFactory } from './session/SocketDescriptorFactory';
 
-export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
-    const socketDebugFactory = new SocketDescriptorFactory();
-	console.log('activate');
-    await socketDebugFactory.activate(context);
+/** The desktop entry point, the only one able to open a WebSocket to the game. */
+export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
-        vscode.commands.registerCommand('sniffer.configureLaunch', () => configureLaunch())
+        vscode.debug.registerDebugAdapterDescriptorFactory('sniffer', new SocketDescriptorFactory()),
     );
-    TracePanel.register(context);
-    await offerSetup(context);
-};
+    activateCommon(context);
+}
