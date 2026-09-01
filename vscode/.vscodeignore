@@ -12,3 +12,4 @@ out
 sampleWebWorkerWorkspace
 sampleWorkspace
 dist/*.test.cjs
+test/**/*
