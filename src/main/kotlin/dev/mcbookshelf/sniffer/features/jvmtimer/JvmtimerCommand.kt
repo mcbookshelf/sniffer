@@ -3,7 +3,6 @@ package dev.mcbookshelf.sniffer.features.jvmtimer
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.context.CommandContext
-import com.mojang.logging.LogUtils
 import dev.mcbookshelf.sniffer.util.Extension.appendLine
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
@@ -25,8 +24,6 @@ import dev.mcbookshelf.sniffer.chat.SnifferChat
  */
 object JvmtimerCommand : SnifferCommand {
 
-    private val LOGGER = LogUtils.getLogger()
-
     val timers = HashMap<String, JvmTimer>()
 
     override fun build(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> =
@@ -36,7 +33,7 @@ object JvmtimerCommand : SnifferCommand {
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it, "id")
-                        getTimer(id).start()
+                        getTimer(id).start(it.source)
                         SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.started", id)
                         1
                     }
@@ -46,7 +43,7 @@ object JvmtimerCommand : SnifferCommand {
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
-                        getTimer(id).end()
+                        getTimer(id).end(it.source)
                         SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.stopped", id)
                         1
                     }
@@ -100,20 +97,20 @@ object JvmtimerCommand : SnifferCommand {
 
         private var maxTime = Long.MIN_VALUE
 
-        fun start(){
+        fun start(source: CommandSourceStack){
             if(!enabled) return
             if((startTime != -1L)){
-                LOGGER.warn("Timer $id is already started! Possible end missing? Timer $id has been disable!")
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.already_started", id)
                 enabled = false
                 startTime = -1L
             }
             startTime = System.nanoTime()
         }
 
-        fun end(){
+        fun end(source: CommandSourceStack){
             if(!enabled) return
             if((startTime == -1L)){
-                LOGGER.warn("Timer $id is not started")
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.not_running", id)
                 enabled = false
                 return
             }
