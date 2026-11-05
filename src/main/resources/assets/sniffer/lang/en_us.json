@@ -16,7 +16,7 @@
   "sniffer.commands.breakpoint.set": "Breakpoint has triggered",
   "sniffer.commands.breakpoint.step.fail": "Can only use `step` command in breakpoint mode",
   "sniffer.commands.jvmtimer.already_started": "Timer %s is already started! Possible end missing? Timer has been disabled!",
-  "sniffer.commands.jvmtimer.disable": "Timer %s is disabled",
+  "sniffer.commands.jvmtimer.disable": "Timer %1$s is disabled. Use /jvmtimer reset %1$s to re-enable it.",
   "sniffer.commands.jvmtimer.info.average": "Average time: ",
   "sniffer.commands.jvmtimer.info.count": "Count: ",
   "sniffer.commands.jvmtimer.info.id": "Timer id: ",

@@ -14,7 +14,7 @@
   "sniffer.commands.breakpoint.set": "断点已触发",
   "sniffer.commands.breakpoint.step.fail": "`step` 命令只能在断点时使用",
   "sniffer.commands.jvmtimer.already_started": "TODO",
-  "sniffer.commands.jvmtimer.disable": "计时器 %s 已禁用",
+  "sniffer.commands.jvmtimer.disable": "计时器 %1$s 已禁用 TODO",
   "sniffer.commands.jvmtimer.info.average": "平均时间: ",
   "sniffer.commands.jvmtimer.info.count": "总运行次数: ",
   "sniffer.commands.jvmtimer.info.id": "计时器ID: ",
