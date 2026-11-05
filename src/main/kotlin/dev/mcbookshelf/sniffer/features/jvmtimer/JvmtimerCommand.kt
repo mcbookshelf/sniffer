@@ -33,8 +33,8 @@ object JvmtimerCommand : SnifferCommand {
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it, "id")
-                        getTimer(id).start(it.source)
-                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.started", id)
+                        if (getTimer(id).start(it.source))
+                            SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.started", id)
                         1
                     }
                 )
@@ -43,8 +43,8 @@ object JvmtimerCommand : SnifferCommand {
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
-                        getTimer(id).end(it.source)
-                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.stopped", id)
+                        if (getTimer(id).end(it.source))
+                            SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.stopped", id)
                         1
                     }
                 )
@@ -97,22 +97,30 @@ object JvmtimerCommand : SnifferCommand {
 
         private var maxTime = Long.MIN_VALUE
 
-        fun start(source: CommandSourceStack){
-            if(!enabled) return
+        fun start(source: CommandSourceStack): Boolean {
+            if(!enabled){
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.disable", id)
+                return false
+            }
             if((startTime != -1L)){
                 SnifferChat.fail(source, "sniffer.commands.jvmtimer.already_started", id)
                 enabled = false
                 startTime = -1L
+                return false
             }
             startTime = System.nanoTime()
+            return true
         }
 
-        fun end(source: CommandSourceStack){
-            if(!enabled) return
+        fun end(source: CommandSourceStack): Boolean {
+            if(!enabled){
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.disable", id)
+                return false
+            }
             if((startTime == -1L)){
                 SnifferChat.fail(source, "sniffer.commands.jvmtimer.not_running", id)
                 enabled = false
-                return
+                return false
             }
             val delta = System.nanoTime() - startTime
             totalTime += delta
@@ -120,6 +128,7 @@ object JvmtimerCommand : SnifferCommand {
             maxTime = max(maxTime, delta)
             count++
             startTime = -1L
+            return true
         }
 
         fun get(ctx: CommandContext<CommandSourceStack>){
