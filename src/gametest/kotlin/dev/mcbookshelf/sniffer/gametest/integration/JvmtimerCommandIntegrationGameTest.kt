@@ -42,6 +42,17 @@ class JvmtimerCommandIntegrationGameTest {
         helper.succeed()
     }
 
+    @GameTest(environment = "sniffer_test:timer_get_before_end")
+    fun getOnARunningTimerReportsNotFinished(helper: GameTestHelper) {
+        val session = DebugSession(helper).withCleanTimer()
+
+        session.run("jvmtimer start $TIMER")
+        val chat = session.runCapturing("jvmtimer get $TIMER")
+        chat.assertExactly(listOf(msg("not_finished")), "get on a running timer should say 'not finished'")
+
+        helper.succeed()
+    }
+
     @GameTest(environment = "sniffer_test:timer_mispaired_start")
     fun aSecondStartWithoutAnEndDisablesTheTimer(helper: GameTestHelper) {
         val session = DebugSession(helper).withCleanTimer()

@@ -22,6 +22,7 @@
   "sniffer.commands.jvmtimer.info.id": "Timer id: ",
   "sniffer.commands.jvmtimer.info.max_min": "Max/Min time: ",
   "sniffer.commands.jvmtimer.info.total": "Total time: ",
+  "sniffer.commands.jvmtimer.not_finished": "Timer %s is running but has not completed a cycle yet. Call end first.",
   "sniffer.commands.jvmtimer.not_running": "Timer %1$s is not started! Timer has been disabled. Use /jvmtimer reset %1$s to re-enable it.",
   "sniffer.commands.jvmtimer.not_started": "Timer %s hasn't started",
   "sniffer.commands.jvmtimer.reset": "Timer %s is reset",

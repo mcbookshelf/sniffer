@@ -133,7 +133,10 @@ object JvmtimerCommand : SnifferCommand {
 
         fun get(ctx: CommandContext<CommandSourceStack>){
             if(count == 0){
-                SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.not_started", id)
+                if(startTime != -1L)
+                    SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.not_finished", id)
+                else
+                    SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.not_started", id)
                 return
             }
             if(!enabled){

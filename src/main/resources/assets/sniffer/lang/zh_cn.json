@@ -20,6 +20,7 @@
   "sniffer.commands.jvmtimer.info.id": "计时器ID: ",
   "sniffer.commands.jvmtimer.info.max_min": "单次最大/最小时间: ",
   "sniffer.commands.jvmtimer.info.total": "总运行时间: ",
+  "sniffer.commands.jvmtimer.not_finished": "TODO",
   "sniffer.commands.jvmtimer.not_running": "TODO",
   "sniffer.commands.jvmtimer.not_started": "计时器 %s 未开始",
   "sniffer.commands.jvmtimer.reset": "计时器 %s 已重置",
