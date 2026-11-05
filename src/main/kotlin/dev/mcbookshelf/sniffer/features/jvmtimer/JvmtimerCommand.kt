@@ -148,7 +148,7 @@ object JvmtimerCommand : SnifferCommand {
                 .desc("sniffer.commands.jvmtimer.info.total").value("${totalTime / 1_000_000.0}ms")
                 .desc("sniffer.commands.jvmtimer.info.count").value(count.toString())
                 .desc("sniffer.commands.jvmtimer.info.average").value("${totalTime / count / 1_000_000.0}ms")
-                .desc("sniffer.commands.jvmtimer.info.max_min").value("${maxTime / 1_000.0}μs/${minTime / 1_000.0}μs")
+                .desc("sniffer.commands.jvmtimer.info.min_max").value("${minTime / 1_000.0}μs/${maxTime / 1_000.0}μs")
             SnifferChat.reply(ctx.source, text)
         }
         fun reset(){

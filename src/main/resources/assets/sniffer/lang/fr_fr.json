@@ -20,7 +20,7 @@
   "sniffer.commands.jvmtimer.info.average": "Temps moyen : ",
   "sniffer.commands.jvmtimer.info.count": "Compteur : ",
   "sniffer.commands.jvmtimer.info.id": "ID du minuteur : ",
-  "sniffer.commands.jvmtimer.info.max_min": "Temps Max/Min : ",
+  "sniffer.commands.jvmtimer.info.min_max": "Temps Min/Max : ",
   "sniffer.commands.jvmtimer.info.total": "Temps total : ",
   "sniffer.commands.jvmtimer.not_finished": "Le minuteur %s est en cours mais n'a pas encore complété un cycle. Appelez end d'abord.",
   "sniffer.commands.jvmtimer.not_running": "Le minuteur %1$s n'est pas démarré ! Le minuteur a été désactivé. Utilisez /jvmtimer reset %1$s pour le réactiver.",

@@ -77,7 +77,7 @@ Timer id: my_function
 Total time: 42.5ms
 Count: 100
 Average time: 0.425ms
-Max/Min time: 981.0μs/112.0μs
+Min/Max time: 112.0μs/981.0μs
 ```
 
 ---

@@ -27,6 +27,12 @@ class JvmtimerCommandIntegrationGameTest {
         val report = session.report()
         assertTrue(report.hasMeasurement(), "A completed timer should report timings, got: $report")
         assertTrue(TIMER in report, "The report should name the timer, got: $report")
+        assertTrue(label("id") in report, "The report should contain the id label, got: $report")
+        assertTrue(label("total") in report, "The report should contain the total label, got: $report")
+        assertTrue(label("count") in report, "The report should contain the count label, got: $report")
+        assertTrue(label("average") in report, "The report should contain the average label, got: $report")
+        assertTrue(label("min_max") in report, "The report should contain the min/max label, got: $report")
+        assertTrue("1" in report, "The count should be 1 after a single measure, got: $report")
         helper.succeed()
     }
 
@@ -142,6 +148,10 @@ class JvmtimerCommandIntegrationGameTest {
     /** Resolves the expected chat message for a jvmtimer translation key, including the [Sniffer] prefix. */
     private fun msg(keySuffix: String, timer: String = TIMER): String =
         SnifferChat.prefixed(Component.translatable("sniffer.commands.jvmtimer.$keySuffix", timer)).string
+
+    /** Resolves a report label from the info translation keys. */
+    private fun label(keySuffix: String): String =
+        Component.translatable("sniffer.commands.jvmtimer.info.$keySuffix").string
 
     private fun List<String>.assertExactly(expected: List<String>, description: String) {
         assertTrue(this == expected, "$description: expected $expected but got $this")

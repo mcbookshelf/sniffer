@@ -18,7 +18,7 @@
   "sniffer.commands.jvmtimer.info.average": "平均时间: ",
   "sniffer.commands.jvmtimer.info.count": "总运行次数: ",
   "sniffer.commands.jvmtimer.info.id": "计时器ID: ",
-  "sniffer.commands.jvmtimer.info.max_min": "单次最大/最小时间: ",
+  "sniffer.commands.jvmtimer.info.min_max": "单次最小/最大时间: ",
   "sniffer.commands.jvmtimer.info.total": "总运行时间: ",
   "sniffer.commands.jvmtimer.not_finished": "TODO",
   "sniffer.commands.jvmtimer.not_running": "TODO",
