@@ -3,7 +3,6 @@ package dev.mcbookshelf.sniffer.features.jvmtimer
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.context.CommandContext
-import com.mojang.logging.LogUtils
 import dev.mcbookshelf.sniffer.util.Extension.appendLine
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
@@ -25,8 +24,6 @@ import dev.mcbookshelf.sniffer.chat.SnifferChat
  */
 object JvmtimerCommand : SnifferCommand {
 
-    private val LOGGER = LogUtils.getLogger()
-
     val timers = HashMap<String, JvmTimer>()
 
     override fun build(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> =
@@ -36,8 +33,8 @@ object JvmtimerCommand : SnifferCommand {
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it, "id")
-                        getTimer(id).start()
-                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.started", id)
+                        if (getTimer(id).start(it.source))
+                            SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.started", id)
                         1
                     }
                 )
@@ -46,8 +43,8 @@ object JvmtimerCommand : SnifferCommand {
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
-                        getTimer(id).end()
-                        SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.stopped", id)
+                        if (getTimer(id).end(it.source))
+                            SnifferChat.reply(it.source, "sniffer.commands.jvmtimer.stopped", id)
                         1
                     }
                 )
@@ -100,22 +97,30 @@ object JvmtimerCommand : SnifferCommand {
 
         private var maxTime = Long.MIN_VALUE
 
-        fun start(){
-            if(!enabled) return
+        fun start(source: CommandSourceStack): Boolean {
+            if(!enabled){
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.disable", id)
+                return false
+            }
             if((startTime != -1L)){
-                LOGGER.warn("Timer $id is already started! Possible end missing? Timer $id has been disable!")
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.already_started", id)
                 enabled = false
                 startTime = -1L
+                return false
             }
             startTime = System.nanoTime()
+            return true
         }
 
-        fun end(){
-            if(!enabled) return
+        fun end(source: CommandSourceStack): Boolean {
+            if(!enabled){
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.disable", id)
+                return false
+            }
             if((startTime == -1L)){
-                LOGGER.warn("Timer $id is not started")
+                SnifferChat.fail(source, "sniffer.commands.jvmtimer.not_running", id)
                 enabled = false
-                return
+                return false
             }
             val delta = System.nanoTime() - startTime
             totalTime += delta
@@ -123,11 +128,15 @@ object JvmtimerCommand : SnifferCommand {
             maxTime = max(maxTime, delta)
             count++
             startTime = -1L
+            return true
         }
 
         fun get(ctx: CommandContext<CommandSourceStack>){
             if(count == 0){
-                SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.not_started", id)
+                if(startTime != -1L)
+                    SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.not_finished", id)
+                else
+                    SnifferChat.reply(ctx.source, "sniffer.commands.jvmtimer.not_started", id)
                 return
             }
             if(!enabled){
@@ -139,7 +148,7 @@ object JvmtimerCommand : SnifferCommand {
                 .desc("sniffer.commands.jvmtimer.info.total").value("${totalTime / 1_000_000.0}ms")
                 .desc("sniffer.commands.jvmtimer.info.count").value(count.toString())
                 .desc("sniffer.commands.jvmtimer.info.average").value("${totalTime / count / 1_000_000.0}ms")
-                .desc("sniffer.commands.jvmtimer.info.max_min").value("${maxTime / 1_000.0}μs/${minTime / 1_000.0}μs")
+                .desc("sniffer.commands.jvmtimer.info.min_max").value("${minTime / 1_000.0}μs/${maxTime / 1_000.0}μs")
             SnifferChat.reply(ctx.source, text)
         }
         fun reset(){
