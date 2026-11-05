@@ -30,7 +30,7 @@ Start the timer, creating it if it does not exist yet.
   **`id`**: Name of the timer.
 
 :Note:
-  Starting a timer twice without ending it in between is a mistake that would corrupt the measure, so the timer disables itself instead and says so in the log.
+  Starting a timer twice without ending it in between is a mistake that would corrupt the measure, so the timer disables itself instead and says so in chat. Use `reset` to re-enable it.
 ```
 
 ---
@@ -43,6 +43,11 @@ Stop the timer and record the elapsed time as one more pass.
 
 :Arguments:
   **`id`**: Name of the timer.
+
+:Note:
+  Starting a timer that was already running disables it and tells you in chat.
+  Ending a timer that was never started disables it and tells you in chat.
+  Use `reset` to re-enable it.
 ```
 
 *Example: measure a function, one pass per call:*
