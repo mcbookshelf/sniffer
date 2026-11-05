@@ -215,7 +215,7 @@ object WatchCommand : SnifferCommand {
         val dispatcher = library.getDispatcher()
         val source = CommandSourceStack(
             CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, server.overworld(),
-            library.getFunctionCompilationPermissions(), "", CommonComponents.EMPTY, server, null
+            library.getFunctionCompilationPermissions(), CommonComponents.EMPTY, server
         )
 
         CompletableFuture

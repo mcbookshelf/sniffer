@@ -27,7 +27,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent
 import net.minecraft.resources.Identifier
 import net.minecraft.util.CommonColors
-import org.lwjgl.glfw.GLFW
 
 
 /**
@@ -62,8 +61,8 @@ class SnifferClient : ClientModInitializer {
 
         val stepInto = KeyMappingHelper.registerKeyMapping(KeyMapping(
             "sniffer.step",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_F7,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_F7,
             KeyMapping.Category.register(Identifier.parse("sniffer.name"))
         ))
 

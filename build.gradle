@@ -94,7 +94,7 @@ dependencies {
 	api("me.shedaniel.cloth:cloth-config-fabric:26.2.155") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
-    implementation("com.terraformersmc:modmenu:20.0.1")
+    implementation("com.terraformersmc:modmenu:21.0.0")
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
