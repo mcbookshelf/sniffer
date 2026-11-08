@@ -143,6 +143,10 @@ class DebugSession(val helper: GameTestHelper) {
         return CommandFunctionUniqueAccessors.of(loaded).debugTags
     }
 
+    /** Whether [function] was marked with `#!jvmtimer profile file`. */
+    fun isProfiled(function: String): Boolean =
+        dev.mcbookshelf.sniffer.features.jvmtimer.ProfiledFunctions.isProfiled(function)
+
     /** The paused call stack, innermost frame first. */
     fun callStack(): List<String> = ScopeManager.get().debugScopes.map { it.function }
 
