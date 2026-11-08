@@ -29,7 +29,7 @@ object JvmtimerCommand : SnifferCommand {
     override fun build(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> =
         literal<CommandSourceStack>("jvmtimer")
             .then(literal<CommandSourceStack>("start")
-                .then(argument("id", StringArgumentType.string())
+                .then(argument("id", StringArgumentType.greedyString())
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it, "id")
@@ -39,7 +39,7 @@ object JvmtimerCommand : SnifferCommand {
                     }
                 )
             ).then(literal<CommandSourceStack>("end")
-                .then(argument("id", StringArgumentType.string())
+                .then(argument("id", StringArgumentType.greedyString())
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
@@ -49,7 +49,7 @@ object JvmtimerCommand : SnifferCommand {
                     }
                 )
             ).then(literal<CommandSourceStack>("get")
-                .then(argument("id", StringArgumentType.string())
+                .then(argument("id", StringArgumentType.greedyString())
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
@@ -58,7 +58,7 @@ object JvmtimerCommand : SnifferCommand {
                     }
                 )
             ).then(literal<CommandSourceStack>("reset")
-                .then(argument("id", StringArgumentType.string())
+                .then(argument("id", StringArgumentType.greedyString())
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
@@ -68,7 +68,7 @@ object JvmtimerCommand : SnifferCommand {
                     }
                 )
             ).then(literal<CommandSourceStack>("disable")
-                .then(argument("id", StringArgumentType.string())
+                .then(argument("id", StringArgumentType.greedyString())
                     .suggests(JvmtimerSuggestionProvider)
                     .executes {
                         val id = StringArgumentType.getString(it ,"id")
