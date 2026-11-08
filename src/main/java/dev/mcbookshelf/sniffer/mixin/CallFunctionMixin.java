@@ -3,6 +3,8 @@ package dev.mcbookshelf.sniffer.mixin;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.mcbookshelf.sniffer.accessor.FrameUniqueAccessor;
 import dev.mcbookshelf.sniffer.accessor.UnboundUniqueAccessor;
+import dev.mcbookshelf.sniffer.features.jvmtimer.JvmtimerCommand;
+import dev.mcbookshelf.sniffer.features.jvmtimer.ProfiledFunctions;
 import dev.mcbookshelf.sniffer.features.variables.MacroArgsStore;
 import dev.mcbookshelf.sniffer.features.callstack.ScopeManager;
 import net.minecraft.commands.CommandSourceStack;
@@ -63,19 +65,28 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
         // popScopeOnce keeps this entry and FrameMixin exclusive, even when vanilla discards the same frame twice.
         context.queueNext(new CommandQueueEntry<>(newFrame, (s, c) -> FrameUniqueAccessor.of(newFrame).popScopeOnce()));
+
+        // Profiler: start the timer now and queue the end on the parent frame.
+        // The parent frame entry survives /return (which only discards newFrame)
+        // and runs after any sub-function called by "return run function".
+        if (ProfiledFunctions.isProfiled(functionId) && sender instanceof CommandSourceStack css) {
+            var timer = JvmtimerCommand.INSTANCE.getTimer(functionId);
+            timer.start(css);
+            context.queueNext(new CommandQueueEntry<>(frame, (s, c) -> timer.end(css)));
+        }
     }
 
     @Unique
     private String getFunctionId() {
-        if (function instanceof PlainTextFunction<?> plainText) {
-            var entries = plainText.entries();
-            if (!entries.isEmpty()) {
-                var first = entries.getFirst();
-                if (first instanceof BuildContexts.Unbound<?> unbound) {
-                    String sourceFunction = UnboundUniqueAccessor.of(unbound).getSourceFunction();
-                    if (sourceFunction != null) return sourceFunction;
-                }
+        var entries = function.entries();
+        if (!entries.isEmpty()) {
+            var first = entries.getFirst();
+            if (first instanceof BuildContexts.Unbound<?> unbound) {
+                String sourceFunction = UnboundUniqueAccessor.of(unbound).getSourceFunction();
+                if (sourceFunction != null) return sourceFunction;
             }
+        }
+        if (function instanceof PlainTextFunction<?> plainText) {
             return plainText.id().toString();
         }
         // Unreachable in vanilla, where every InstantiatedFunction is a PlainTextFunction.

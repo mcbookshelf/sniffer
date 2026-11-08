@@ -6,6 +6,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import dev.mcbookshelf.sniffer.accessor.CommandFunctionUniqueAccessors;
 import dev.mcbookshelf.sniffer.accessor.MacroFunctionUniqueAccessor;
 import dev.mcbookshelf.sniffer.accessor.UnboundUniqueAccessor;
+import dev.mcbookshelf.sniffer.features.jvmtimer.ProfiledFunctions;
 import dev.mcbookshelf.sniffer.features.source.FunctionTextLoader;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.UnboundEntryAction;
@@ -39,6 +40,7 @@ public interface FunctionParsingMixin {
 
         ArrayList<String> preprocessed = new ArrayList<>(lines.size());
         ArrayList<String> debugTags = new ArrayList<>();
+        boolean profiled = false;
         // Index in the preprocessed lines to zero indexed line number in the original source.
         ArrayList<Integer> lineMapping = new ArrayList<>();
 
@@ -46,7 +48,12 @@ public interface FunctionParsingMixin {
             String line = lines.get(i).trim();
             if (line.startsWith("#!")) {
                 String debugCmd = line.substring(2).stripLeading();
-                preprocessed.add(debugCmd.isEmpty() ? "# empty debug command" : debugCmd);
+                if (debugCmd.equals("jvmtimer profile file")) {
+                    profiled = true;
+                    preprocessed.add("# jvmtimer profile file"); // Keep the same number of lines
+                } else {
+                    preprocessed.add(debugCmd.isEmpty() ? "# empty debug command" : debugCmd);
+                }
             } else if (line.startsWith("#@")) {
                 // Replaced by a comment so vanilla skips the line it was on.
                 String tag = line.substring(2).stripLeading().split("\\s+")[0];
@@ -63,6 +70,9 @@ public interface FunctionParsingMixin {
 
         if (!debugTags.isEmpty()) {
             CommandFunctionUniqueAccessors.of(result).setDebugTags(debugTags);
+        }
+        if (profiled) {
+            ProfiledFunctions.register(id.toString());
         }
 
         return result;
