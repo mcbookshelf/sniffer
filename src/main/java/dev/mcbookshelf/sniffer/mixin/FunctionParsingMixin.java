@@ -73,6 +73,8 @@ public interface FunctionParsingMixin {
         }
         if (profiled) {
             ProfiledFunctions.register(id.toString());
+        } else {
+            ProfiledFunctions.unregister(id.toString());
         }
 
         return result;

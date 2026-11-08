@@ -16,5 +16,10 @@ object ProfiledFunctions {
     }
 
     @JvmStatic
+    fun unregister(functionId: String) {
+        ids.remove(functionId)
+    }
+
+    @JvmStatic
     fun isProfiled(functionId: String): Boolean = functionId in ids
 }
