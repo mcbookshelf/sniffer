@@ -60,6 +60,34 @@ function test:expensive
 
 ---
 
+### Profile file
+
+```{describe} #!jvmtimer profile file
+
+A directive placed anywhere in a `.mcfunction` file. Every call to that function is automatically timed without needing manual `start`/`end` pairs.
+
+The timer id is the function's resource location (e.g. `my_pack:dir/my_function`).
+
+:Note:
+  The directive does not inject commands into the function, so line numbers and the debugger are not affected, and the injection is does at parsing time, to introduce minimal overhead.
+  The timing includes sub-functions called.
+  Unlike manual `start`/`end` pairs, this works correctly with functions that use `return`, an `end` placed after a `return` would never execute, making accurate timing impossible.
+  Recursive function is NOT supported.
+```
+
+*Example: profile an entire function:*
+
+```mcfunction
+#!jvmtimer profile file
+say starting expensive work
+function test:sub_task
+say done
+```
+
+Then use `/jvmtimer get my_pack:dir/my_function` to see the results.
+
+---
+
 ### Get
 
 ```{describe} /jvmtimer get <id>
